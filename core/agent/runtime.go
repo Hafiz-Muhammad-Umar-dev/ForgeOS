@@ -161,20 +161,35 @@ func (r *Runtime) RunTaskStream(ctx context.Context, agentName string, task Task
 }
 
 // runStream executes the agent in a goroutine and sends events on the channel.
+// Every channel send is guarded by a ctx.Done() check so the goroutine exits
+// cleanly when the consumer stops reading or the context is cancelled.
 func (r *Runtime) runStream(ctx context.Context, agent Agent, ac Context, ch chan<- AgentEvent) {
 	defer close(ch)
 
 	r.publishEvent(ctx, newTaskStartedEvent(ac.Task, agent.Name()))
-	ch <- AgentEvent{Content: fmt.Sprintf("starting agent %q for task %q\n", agent.Name(), ac.Task.Description)}
+
+	select {
+	case <-ctx.Done():
+		return
+	case ch <- AgentEvent{Content: fmt.Sprintf("starting agent %q for task %q\n", agent.Name(), ac.Task.Description)}:
+	}
 
 	result, err := agent.Run(ac)
 	if err != nil {
 		r.publishEvent(ctx, newTaskFailedEvent(ac.Task, agent.Name(), err))
-		ch <- AgentEvent{Err: err}
+		select {
+		case <-ctx.Done():
+			return
+		case ch <- AgentEvent{Err: err}:
+		}
 		return
 	}
 
-	ch <- AgentEvent{Done: true, Result: result}
+	select {
+	case <-ctx.Done():
+		return
+	case ch <- AgentEvent{Done: true, Result: result}:
+	}
 	r.publishEvent(ctx, newTaskCompletedEvent(ac.Task, agent.Name(), result))
 }
 

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/provider"
@@ -37,6 +38,8 @@ type FakeAgent struct {
 
 	// ReceivedTasks records every Task received.
 	ReceivedTasks []Task
+
+	mu sync.Mutex
 }
 
 // NewFakeAgent creates a FakeAgent with the given name.
@@ -60,8 +63,10 @@ func (f *FakeAgent) Description() string { return f.DescriptionValue }
 // Run records the call and returns the configured result.
 func (f *FakeAgent) Run(ctx Context) (*Result, error) {
 	f.RunCount.Add(1)
+	f.mu.Lock()
 	f.ReceivedContexts = append(f.ReceivedContexts, ctx)
 	f.ReceivedTasks = append(f.ReceivedTasks, ctx.Task)
+	f.mu.Unlock()
 
 	if f.RunFunc != nil {
 		return f.RunFunc(ctx)
