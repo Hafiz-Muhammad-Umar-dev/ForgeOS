@@ -68,12 +68,65 @@ func (s CapabilitySet) Slice() []Capability {
 	return out
 }
 
+// RegistrationKind constants for ServiceInfo.Kind.
+const (
+	KindAgent    = "agent"
+	KindTool     = "tool"
+	KindProvider = "provider"
+	KindService  = "service"
+	KindChannel  = "channel"
+)
+
 // Registry is the service-discovery and capability-index port.
 type Registry interface {
+	// --- Generic methods ---
+
+	// Register adds a service to the registry. Returns ErrAlreadyRegistered
+	// when an entry with the same ID already exists.
 	Register(ctx context.Context, info ServiceInfo) error
+
+	// Deregister removes a service by ID.
 	Deregister(ctx context.Context, id string) error
+
+	// Discover returns all services of the given kind.
 	Discover(ctx context.Context, kind string) ([]ServiceInfo, error)
+
+	// Resolve returns the first service that provides the given capability.
 	Resolve(ctx context.Context, capability Capability) (ServiceInfo, error)
+
+	// ResolveByID returns the service with the given ID.
 	ResolveByID(ctx context.Context, id string) (ServiceInfo, error)
+
+	// Watch returns a channel that receives updates when services matching
+	// the capability are registered or deregistered.
 	Watch(ctx context.Context, capability Capability) (<-chan ServiceInfo, error)
+
+	// --- Typed convenience methods ---
+
+	// RegisterAgent registers a service with KindAgent.
+	RegisterAgent(ctx context.Context, info ServiceInfo) error
+
+	// RegisterTool registers a service with KindTool.
+	RegisterTool(ctx context.Context, info ServiceInfo) error
+
+	// RegisterProvider registers a service with KindProvider.
+	RegisterProvider(ctx context.Context, info ServiceInfo) error
+
+	// GetAgent returns a registered agent by ID.
+	GetAgent(ctx context.Context, id string) (ServiceInfo, error)
+
+	// GetTool returns a registered tool by ID.
+	GetTool(ctx context.Context, id string) (ServiceInfo, error)
+
+	// GetProvider returns a registered provider by ID.
+	GetProvider(ctx context.Context, id string) (ServiceInfo, error)
+
+	// ListAgents returns all registered agents.
+	ListAgents(ctx context.Context) ([]ServiceInfo, error)
+
+	// ListTools returns all registered tools.
+	ListTools(ctx context.Context) ([]ServiceInfo, error)
+
+	// ListProviders returns all registered providers.
+	ListProviders(ctx context.Context) ([]ServiceInfo, error)
 }
