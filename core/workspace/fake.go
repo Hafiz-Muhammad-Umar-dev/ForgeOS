@@ -145,6 +145,8 @@ type FakeSecretProxy struct {
 
 	// ResolveCount tracks the number of Resolve calls.
 	ResolveCount atomic.Int64
+
+	mu sync.RWMutex
 }
 
 // NewFakeSecretProxy creates a FakeSecretProxy with the given secrets.
@@ -158,7 +160,9 @@ func NewFakeSecretProxy(secrets map[string]string) *FakeSecretProxy {
 // Resolve looks up a secret by key.
 func (f *FakeSecretProxy) Resolve(ctx context.Context, ref SecretRef) (ResolvedSecret, error) {
 	f.ResolveCount.Add(1)
+	f.mu.RLock()
 	val, ok := f.Secrets[ref.Key]
+	f.mu.RUnlock()
 	if !ok {
 		return ResolvedSecret{Exists: false}, nil
 	}
