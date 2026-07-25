@@ -26,6 +26,8 @@ type EventType string
 const (
 	TypeIntentCreated     EventType = "intent.created"
 	TypeIntentCancelled   EventType = "intent.cancelled"
+	TypeIntentCompleted   EventType = "intent.completed"
+	TypeIntentFailed      EventType = "intent.failed"
 	TypePlanProposed      EventType = "plan.proposed"
 	TypePlanApproved      EventType = "plan.approved"
 	TypePlanRejected      EventType = "plan.rejected"
