@@ -16,22 +16,60 @@ import (
 // Compile-time check.
 var _ lifecycle.Component = (*Service)(nil)
 
-// Service subscribes to intent.completed and intent.failed events,
-// deserializes them, and dispatches notifications through the
-// NotificationPort. It implements lifecycle.Component.
+// Service subscribes to orchestration lifecycle events, dispatches
+// notifications through a NotificationPort, and optionally renders and
+// sends them through a ChannelProvider. It implements lifecycle.Component.
 type Service struct {
 	bus      bus.BusPort
 	notifier NotificationPort
+	renderer Renderer
+	channel  ChannelProvider
+	subs     []bus.Subscription
+	subjects []string
+	mu       sync.Mutex
+}
 
-	subs []bus.Subscription
-	mu   sync.Mutex
+// ServiceOption configures the Service.
+type ServiceOption func(*Service)
+
+// WithRenderer attaches a message renderer for channel-formatting.
+func WithRenderer(r Renderer) ServiceOption {
+	return func(s *Service) { s.renderer = r }
+}
+
+// WithChannel attaches a channel provider for outbound delivery.
+func WithChannel(c ChannelProvider) ServiceOption {
+	return func(s *Service) { s.channel = c }
+}
+
+// WithNotificationSubjects sets the event subjects to subscribe to.
+// If empty, defaults are used.
+func WithNotificationSubjects(subjects []string) ServiceOption {
+	return func(s *Service) { s.subjects = subjects }
 }
 
 // NewService creates a new notification service.
-func NewService(b bus.BusPort, notifier NotificationPort) *Service {
-	return &Service{
+// The notifier is always used; renderer and channel are optional.
+func NewService(b bus.BusPort, notifier NotificationPort, opts ...ServiceOption) *Service {
+	s := &Service{
 		bus:      b,
 		notifier: notifier,
+		subjects: defaultSubjects(),
+	}
+	for _, fn := range opts {
+		fn(s)
+	}
+	return s
+}
+
+// defaultSubjects returns the default set of event subjects to subscribe to.
+func defaultSubjects() []string {
+	return []string{
+		"devos.intent.completed",
+		"devos.intent.failed",
+		"devos.task.status",
+		"devos.task.failed",
+		"devos.deploy.completed",
 	}
 }
 
@@ -53,17 +91,11 @@ func (s *Service) Init(_ context.Context) error {
 	return nil
 }
 
-// Start subscribes to intent.completed and intent.failed.
+// Start subscribes to all configured event subjects.
 func (s *Service) Start(ctx context.Context) error {
-	subjects := []string{
-		"devos.intent.completed",
-		"devos.intent.failed",
-	}
-
-	for _, subj := range subjects {
+	for _, subj := range s.subjects {
 		sub, err := s.bus.Subscribe(ctx, subj, s.handleEvent)
 		if err != nil {
-			// Unwind on failure
 			s.unsubscribeAll()
 			return fmt.Errorf("notification: subscribe %s: %w", subj, err)
 		}
@@ -72,7 +104,7 @@ func (s *Service) Start(ctx context.Context) error {
 		s.mu.Unlock()
 	}
 
-	log.Printf("notification: subscribed to %v", subjects)
+	log.Printf("notification: subscribed to %d subjects", len(s.subjects))
 	return nil
 }
 
@@ -93,7 +125,6 @@ func (s *Service) Health() lifecycle.Health {
 	return lifecycle.Health{Status: lifecycle.StatusUp, Since: time.Now()}
 }
 
-// unsubscribeAll safely removes all subscriptions.
 func (s *Service) unsubscribeAll() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -114,7 +145,7 @@ func (s *Service) handleEvent(ctx context.Context, msg bus.Message) error {
 		return nil
 	}
 
-	if env.Type != event.TypeIntentCompleted && env.Type != event.TypeIntentFailed {
+	if !s.isRelevantType(env.Type) {
 		_ = msg.Ack()
 		return nil
 	}
@@ -134,12 +165,37 @@ func (s *Service) handleEvent(ctx context.Context, msg bus.Message) error {
 		TraceID:  env.TraceID,
 	}
 
+	// Always send through the NotificationPort (logging, etc.).
 	if err := s.notifier.Send(ctx, notification); err != nil {
-		log.Printf("notification: send failed: %v", err)
-		_ = msg.Nak()
-		return nil
+		log.Printf("notification: port send failed: %v", err)
+	}
+
+	// Optionally render and deliver through a channel adapter.
+	if s.renderer != nil && s.channel != nil {
+		channelMsg, renderErr := s.renderer.Render(ctx, notification)
+		if renderErr != nil {
+			log.Printf("notification: render failed: %v", renderErr)
+		} else {
+			if sendErr := s.channel.Send(ctx, channelMsg); sendErr != nil {
+				log.Printf("notification: channel send failed: %v", sendErr)
+			}
+		}
 	}
 
 	_ = msg.Ack()
 	return nil
+}
+
+// isRelevantType checks whether the event type should be handled.
+func (s *Service) isRelevantType(typ event.EventType) bool {
+	switch typ {
+	case event.TypeIntentCompleted,
+		event.TypeIntentFailed,
+		event.TypeTaskStatus,
+		event.TypeTaskFailed,
+		event.TypeDeployCompleted:
+		return true
+	default:
+		return false
+	}
 }
