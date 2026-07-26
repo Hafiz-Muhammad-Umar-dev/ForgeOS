@@ -125,3 +125,51 @@ func splitContent(s string, chunkSize int) []string {
 	}
 	return chunks
 }
+
+// Compile-time check.
+var _ DeployProvider = (*FakeDeployProvider)(nil)
+
+// FakeDeployProvider is an in-memory DeployProvider implementation for testing.
+type FakeDeployProvider struct {
+	DeployFunc func(ctx context.Context, req DeployRequest) (DeployResponse, error)
+	StatusFunc func(ctx context.Context, deploymentID string) (DeployStatus, error)
+	DefaultResponse DeployResponse
+	DefaultStatus   DeployStatus
+	DeployCount     atomic.Int64
+	ReceivedRequests []DeployRequest
+	ConfiguredCapabilities *DeployCapabilities
+}
+
+func NewFakeDeployProvider() *FakeDeployProvider {
+	return &FakeDeployProvider{
+		DefaultResponse: DeployResponse{
+			DeploymentID: "deploy-fake-1",
+			URL:          "https://fake-deploy.example.com",
+			Status:       DeployStatusReady,
+		},
+		DefaultStatus: DeployStatusReady,
+	}
+}
+
+func (f *FakeDeployProvider) Deploy(ctx context.Context, req DeployRequest) (DeployResponse, error) {
+	f.DeployCount.Add(1)
+	f.ReceivedRequests = append(f.ReceivedRequests, req)
+	if f.DeployFunc != nil {
+		return f.DeployFunc(ctx, req)
+	}
+	return f.DefaultResponse, nil
+}
+
+func (f *FakeDeployProvider) Status(_ context.Context, _ string) (DeployStatus, error) {
+	if f.StatusFunc != nil {
+		return f.StatusFunc(nil, "")
+	}
+	return f.DefaultStatus, nil
+}
+
+func (f *FakeDeployProvider) Capabilities() DeployCapabilities {
+	if f.ConfiguredCapabilities != nil {
+		return *f.ConfiguredCapabilities
+	}
+	return DeployCapabilities{Provider: "fake", Regions: []string{"us-east"}}
+}

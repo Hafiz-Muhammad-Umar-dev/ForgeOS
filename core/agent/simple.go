@@ -26,9 +26,10 @@ var _ Agent = (*SimpleAgent)(nil)
 // When no tool call is detected in the response, the agent treats the
 // response as the final answer and completes.
 type SimpleAgent struct {
-	name        string
-	description string
-	model       string
+	name         string
+	description  string
+	model        string
+	systemPrompt string // optional override; empty = auto-generated
 }
 
 // NewSimpleAgent creates a new SimpleAgent with the given name and
@@ -41,6 +42,17 @@ func NewSimpleAgent(name, description, model string) *SimpleAgent {
 	}
 }
 
+// NewSimpleAgentWithPrompt creates a SimpleAgent with a custom system prompt.
+// When set, systemPrompt replaces the auto-generated prompt from buildSystemPrompt.
+func NewSimpleAgentWithPrompt(name, description, model, systemPrompt string) *SimpleAgent {
+	return &SimpleAgent{
+		name:         name,
+		description:  description,
+		model:        model,
+		systemPrompt: systemPrompt,
+	}
+}
+
 // Name returns the agent name.
 func (a *SimpleAgent) Name() string { return a.name }
 
@@ -49,7 +61,10 @@ func (a *SimpleAgent) Description() string { return a.description }
 
 // Run executes the agent loop: LLM → parse → tool → loop → result.
 func (a *SimpleAgent) Run(ctx Context) (*Result, error) {
-	systemPrompt := a.buildSystemPrompt(ctx.Tools)
+systemPrompt := a.systemPrompt
+	if systemPrompt == "" {
+		systemPrompt = a.buildSystemPrompt(ctx.Tools)
+	}
 	messages := []provider.Message{
 		{Role: provider.RoleUser, Content: ctx.Task.Description},
 	}

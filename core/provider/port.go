@@ -1,23 +1,7 @@
-// Package provider defines the LLM provider port abstraction (LLMProvider) for
+// Package provider defines the LLM and Deploy provider port abstractions for
 // the DevOS kernel. It follows the ports/adapters (hexagonal) architecture:
-// core/domain uses LLMProvider, and adapters (e.g., claude.go) satisfy it
+// core/domain uses LLMProvider and DeployProvider, and adapters satisfy them
 // without leaking provider SDK types into domain code.
-//
-// Sprint 0 scope:
-//   - LLMProvider interface (Complete, Stream, Capabilities)
-//   - Request/response types
-//   - Claude adapter
-//   - Streaming support
-//   - Configuration
-//   - FakeProvider for tests
-//
-// Excluded from Sprint 0 (deferred to later components):
-//   - Tool use / function calling
-//   - Provider routing
-//   - Multi-provider support
-//   - Cost tracking
-//   - Circuit breakers
-//   - Deploy/Vector/Channel providers
 //
 // See ADR-003 (Provider Abstraction via Ports), SDD §05 (Provider Gateway).
 package provider
@@ -122,4 +106,64 @@ type Capabilities struct {
 
 	// MaxTokens is the maximum allowed output tokens.
 	MaxTokens int `json:"max_tokens"`
+}
+
+// ---------------------------------------------------------------------------
+// DeployProvider
+// ---------------------------------------------------------------------------
+
+// DeployProvider is the abstraction for a deployment provider (Vercel, Fly.io).
+// Implementations handle source upload, build, release, and status tracking.
+type DeployProvider interface {
+	// Deploy triggers a deployment from the given source and returns tracking info.
+	Deploy(ctx context.Context, req DeployRequest) (DeployResponse, error)
+
+	// Status returns the current status of a deployment.
+	Status(ctx context.Context, deploymentID string) (DeployStatus, error)
+
+	// Capabilities returns the provider's advertised capabilities.
+	Capabilities() DeployCapabilities
+}
+
+// DeployRequest is the input to a deployment call.
+type DeployRequest struct {
+	// Source is the git repository URL to deploy.
+	Source string `json:"source"`
+
+	// ProjectName is the target project or app name.
+	ProjectName string `json:"project_name"`
+
+	// Env are environment variables to inject during the build.
+	Env map[string]string `json:"env,omitempty"`
+}
+
+// DeployResponse is the result of a deployment request.
+type DeployResponse struct {
+	// DeploymentID uniquely identifies the deployment.
+	DeploymentID string `json:"deployment_id"`
+
+	// URL is the public URL of the deployed application.
+	URL string `json:"url"`
+
+	// Status is the initial deployment status.
+	Status DeployStatus `json:"status"`
+}
+
+// DeployStatus represents the lifecycle state of a deployment.
+type DeployStatus string
+
+const (
+	DeployStatusPending   DeployStatus = "pending"
+	DeployStatusDeploying DeployStatus = "deploying"
+	DeployStatusReady     DeployStatus = "ready"
+	DeployStatusFailed    DeployStatus = "failed"
+)
+
+// DeployCapabilities describes a deploy provider's capabilities.
+type DeployCapabilities struct {
+	// Provider is the provider name (e.g., "vercel", "fly").
+	Provider string `json:"provider"`
+
+	// Regions is the list of supported deployment regions.
+	Regions []string `json:"regions"`
 }

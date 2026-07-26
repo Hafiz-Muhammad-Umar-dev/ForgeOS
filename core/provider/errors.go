@@ -26,4 +26,10 @@ var (
 	// ErrStreamInterrupted is returned when the stream connection is lost
 	// before completion.
 	ErrStreamInterrupted = errors.New("provider: stream interrupted")
+
+	// ErrDeployFailed is returned when a deployment fails.
+	ErrDeployFailed = errors.New("provider: deploy failed")
+
+	// ErrDeployNotFound is returned when a deployment ID is not found.
+	ErrDeployNotFound = errors.New("provider: deploy not found")
 )
