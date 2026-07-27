@@ -57,21 +57,21 @@ type Agent interface {
 type ResultStatus string
 
 const (
-	ResultSuccess            ResultStatus = "success"
-	ResultFailed             ResultStatus = "failed"
-	ResultMaxIterations      ResultStatus = "max_iterations"
-	ResultCancelled          ResultStatus = "cancelled"
+	ResultSuccess       ResultStatus = "success"
+	ResultFailed        ResultStatus = "failed"
+	ResultMaxIterations ResultStatus = "max_iterations"
+	ResultCancelled     ResultStatus = "cancelled"
 )
 
 // Result is the outcome of a single agent run.
 type Result struct {
-	TaskID      string        `json:"task_id"`
-	Summary     string        `json:"summary"`
-	Status      ResultStatus  `json:"status"`
-	Artifacts   []Artifact    `json:"artifacts,omitempty"`
+	TaskID       string       `json:"task_id"`
+	Summary      string       `json:"summary"`
+	Status       ResultStatus `json:"status"`
+	Artifacts    []Artifact   `json:"artifacts,omitempty"`
 	InputTokens  int          `json:"input_tokens"`
 	OutputTokens int          `json:"output_tokens"`
-	Iterations  int           `json:"iterations"`
+	Iterations   int          `json:"iterations"`
 }
 
 // Artifact is a named output produced by an agent (file, report, etc.).
