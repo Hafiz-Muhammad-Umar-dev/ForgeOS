@@ -44,6 +44,8 @@ const (
 	TypeTestResult        EventType = "test.result"
 	TypeSecurityFinding   EventType = "security.finding"
 	TypeGitCommit         EventType = "git.commit"
+	TypeDeployApproved    EventType = "deploy.approved"
+	TypeDeployRejected    EventType = "deploy.rejected"
 	TypeDeployCompleted   EventType = "deploy.completed"
 	TypeBudgetExceeded    EventType = "budget.exceeded"
 	TypeWorkspaceReady    EventType = "workspace.ready"
