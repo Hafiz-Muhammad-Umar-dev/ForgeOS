@@ -42,7 +42,11 @@ func (f *FakeHITLGate) RequestApproval(ctx context.Context, req ApprovalRequest)
 	f.ReceivedRequests = append(f.ReceivedRequests, req)
 
 	if f.SimulateTimeout {
-		<-ctx.Done()
+		// Wait a short time then return timeout.
+		select {
+		case <-ctx.Done():
+		case <-time.After(5 * time.Millisecond):
+		}
 		return ApprovalResult{}, ErrTimeout
 	}
 	if f.Delay > 0 {

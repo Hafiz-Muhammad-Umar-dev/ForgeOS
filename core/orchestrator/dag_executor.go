@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/agent"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/budget"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/bus"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/dag"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/event"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/hitl"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/lifecycle"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/planner"
@@ -27,20 +29,39 @@ type DAGExecutor struct {
 	planner     planner.Planner
 	coordinator *Coordinator
 	nodeExec    *NodeExecutor
+	gate        hitl.HITLGate     // optional human-in-the-loop approval
+	gov         budget.Governor   // optional budget enforcement
 	sub         bus.Subscription
 	mu          sync.Mutex
 	started     bool
 }
 
+// DAGExecutorOption configures the DAGExecutor.
+type DAGExecutorOption func(*DAGExecutor)
+
+// WithHITLGate attaches a human-in-the-loop approval gate.
+func WithHITLGate(g hitl.HITLGate) DAGExecutorOption {
+	return func(e *DAGExecutor) { e.gate = g }
+}
+
+// WithBudgetGovernor attaches a budget governor for token/cost enforcement.
+func WithBudgetGovernor(g budget.Governor) DAGExecutorOption {
+	return func(e *DAGExecutor) { e.gov = g }
+}
+
 // NewDAGExecutor creates a new DAGExecutor.
-func NewDAGExecutor(b bus.BusPort, p planner.Planner, reg registry.Registry, runner TaskRunner) *DAGExecutor {
+func NewDAGExecutor(b bus.BusPort, p planner.Planner, reg registry.Registry, runner TaskRunner, opts ...DAGExecutorOption) *DAGExecutor {
 	coord := NewCoordinator(reg, runner)
-	return &DAGExecutor{
+	e := &DAGExecutor{
 		bus:         b,
 		planner:     p,
 		coordinator: coord,
 		nodeExec:    NewNodeExecutor(coord),
 	}
+	for _, fn := range opts {
+		fn(e)
+	}
+	return e
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +160,35 @@ func (e *DAGExecutor) handleIntentCreated(ctx context.Context, msg bus.Message) 
 	e.publishPlanStarted(ctx, d, env)
 	e.publishPlanProposed(ctx, d, env)
 
+	// HITL gate: pause execution until human approves/rejects the plan.
+	if e.gate != nil {
+		// Use a timeout context so approval does not block indefinitely.
+		approvalCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+		defer cancel()
+
+		approvalReq := hitl.ApprovalRequest{
+			ID:       dagID + "-approval",
+			IntentID: dagID,
+			Type:     hitl.ApprovalPlan,
+			Summary:  payload.Text,
+		}
+		result, err := e.gate.RequestApproval(approvalCtx, approvalReq)
+		if err != nil || result.Status == hitl.ApprovalRejected || result.Status == hitl.ApprovalExpired {
+			reason := "plan rejected"
+			if err != nil {
+				reason = err.Error()
+			} else if result.Reason != "" {
+				reason = result.Reason
+			}
+			log.Printf("dag_executor: plan rejected for intent=%s: %s", dagID, reason)
+			e.publishPlanRejected(ctx, d, env, reason)
+			e.publishIntentFailed(ctx, env, payload, fmt.Errorf("plan rejected: %s", reason))
+			_ = msg.Ack()
+			return nil
+		}
+		log.Printf("dag_executor: plan approved for intent=%s", dagID)
+	}
+
 	if err := e.executeDAG(ctx, d, env, payload); err != nil {
 		log.Printf("dag_executor: execution failed for intent=%s: %v", dagID, err)
 		_ = msg.Ack()
@@ -169,6 +219,19 @@ func (e *DAGExecutor) executeDAG(ctx context.Context, d *dag.DAG, env event.RawE
 			continue
 		}
 
+		// Budget check: verify capacity before dispatching.
+		if e.gov != nil {
+			if _, err := e.gov.Check(ctx, env.OrgID); err != nil {
+				log.Printf("dag_executor: budget exceeded for org=%s node=%s", env.OrgID, node.ID)
+				e.publishNodeFailed(ctx, node, d, env)
+				node.Error = err.Error()
+				e.publishBudgetExceeded(ctx, env)
+				e.markDownstreamSkipped(d, node.ID)
+				e.publishIntentFailed(ctx, env, payload, err)
+				return nil
+			}
+		}
+
 		result, execErr := e.nodeExec.Execute(ctx, node, d)
 		if execErr != nil {
 			e.publishNodeFailed(ctx, node, d, env)
@@ -178,6 +241,18 @@ func (e *DAGExecutor) executeDAG(ctx context.Context, d *dag.DAG, env event.RawE
 		}
 
 		e.publishNodeStatus(ctx, node, d, result, env)
+
+		// Budget consumption: record usage after successful dispatch.
+		if e.gov != nil && result != nil {
+			usage := budget.Usage{
+				InputTokens:  result.InputTokens,
+				OutputTokens: result.OutputTokens,
+				AgentName:    node.Agent,
+			}
+			if err := e.gov.Consume(ctx, env.OrgID, usage); err != nil {
+				log.Printf("dag_executor: budget consume failed for org=%s: %v", env.OrgID, err)
+			}
+		}
 	}
 
 	d.Status = dag.DAGCompleted
@@ -206,6 +281,18 @@ func (e *DAGExecutor) publishPlanStarted(ctx context.Context, d *dag.DAG, env ev
 
 func (e *DAGExecutor) publishPlanProposed(ctx context.Context, d *dag.DAG, env event.RawEnvelope) {
 	e.publish(ctx, event.TypePlanProposed, d.ID, env)
+}
+
+func (e *DAGExecutor) publishPlanRejected(ctx context.Context, d *dag.DAG, env event.RawEnvelope, reason string) {
+	_ = e.publishPayload(ctx, event.TypePlanRejected, map[string]string{
+		"dag_id": d.ID, "reason": reason,
+	}, env)
+}
+
+func (e *DAGExecutor) publishBudgetExceeded(ctx context.Context, env event.RawEnvelope) {
+	_ = e.publishPayload(ctx, event.TypeBudgetExceeded, map[string]string{
+		"org_id": env.OrgID,
+	}, env)
 }
 
 func (e *DAGExecutor) publishNodeStatus(ctx context.Context, node *dag.Node, d *dag.DAG, result *agent.Result, env event.RawEnvelope) {
