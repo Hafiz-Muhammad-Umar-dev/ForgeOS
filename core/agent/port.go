@@ -183,6 +183,16 @@ type AgentEvent struct {
 	Err error `json:"-"`
 }
 
+// TaskStatusPayload is the strongly-typed payload for task.status and
+// task.failed events published by the Agent Runtime.
+type TaskStatusPayload struct {
+	TaskID    string `json:"task_id"`
+	Status    string `json:"status"`
+	AgentName string `json:"agent_name,omitempty"`
+	Summary   string `json:"summary,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
 // ToolCall represents an agent's request to invoke a tool.
 type ToolCall struct {
 	// ID uniquely identifies this tool call within the run.

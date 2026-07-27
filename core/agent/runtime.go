@@ -260,7 +260,7 @@ func newTaskStartedEvent(task Task, agentName string) event.RawEnvelope {
 		Type:       event.TypeTaskStatus,
 		ProducedBy: agentName,
 		ProducedAt: time.Now().UnixNano(),
-		Payload:    mustMarshal(map[string]any{"task_id": task.ID, "status": "started"}),
+		Payload:    mustMarshal(TaskStatusPayload{TaskID: task.ID, Status: "started", AgentName: agentName}),
 	}
 }
 
@@ -270,7 +270,7 @@ func newTaskCompletedEvent(task Task, agentName string, result *Result) event.Ra
 		Type:       event.TypeTaskStatus,
 		ProducedBy: agentName,
 		ProducedAt: time.Now().UnixNano(),
-		Payload:    mustMarshal(map[string]any{"task_id": task.ID, "status": "completed", "summary": result.Summary}),
+		Payload:    mustMarshal(TaskStatusPayload{TaskID: task.ID, Status: "completed", AgentName: agentName, Summary: result.Summary}),
 	}
 }
 
@@ -280,7 +280,7 @@ func newTaskFailedEvent(task Task, agentName string, err error) event.RawEnvelop
 		Type:       event.TypeTaskFailed,
 		ProducedBy: agentName,
 		ProducedAt: time.Now().UnixNano(),
-		Payload:    mustMarshal(map[string]any{"task_id": task.ID, "status": "failed", "error": err.Error()}),
+		Payload:    mustMarshal(TaskStatusPayload{TaskID: task.ID, Status: "failed", AgentName: agentName, Error: err.Error()}),
 	}
 }
 
