@@ -7,6 +7,7 @@ import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { StreamingConsole } from "../components/StreamingConsole";
+import { CollaborativeEditor } from "../components/CollaborativeEditor";
 
 export function IntentView(): React.ReactNode {
   const [params] = useSearchParams();
@@ -75,6 +76,11 @@ export function IntentView(): React.ReactNode {
                   <p className="mt-1 text-sm text-red-300">{intent.error}</p>
                 </div>
               )}
+            </div>
+
+            {/* Collaborative editor */}
+            <div className="mt-6">
+              <CollaborativeEditor intentId={intent.id} />
             </div>
           </div>
 
