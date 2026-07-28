@@ -41,7 +41,7 @@ export function Navigation(): React.ReactNode {
 
       {user !== null && (
         <div className="flex items-center gap-3 border-l border-slate-700 pl-4">
-          <span className="text-xs text-slate-400">{user.sub}</span>
+          <span className="text-xs text-slate-400">{user.name}</span>
           <button
             type="button"
             onClick={() => {

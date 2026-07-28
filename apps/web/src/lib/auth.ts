@@ -1,20 +1,24 @@
 import { ApiError } from "./api";
 
-const BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/v1";
+// Auth service runs on a separate port during development.
+const AUTH_BASE_URL: string =
+  (import.meta.env.VITE_AUTH_BASE_URL as string | undefined) ?? "http://localhost:8081";
 
 export interface AuthUser {
-  readonly sub: string;
-  readonly org_id: string;
-  readonly scopes?: string[];
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
 }
 
 export interface LoginRequest {
-  readonly token: string;
+  readonly username: string;
+  readonly password: string;
 }
 
 export interface LoginResponse {
-  readonly token: string;
+  readonly access_token: string;
+  readonly token_type: string;
+  readonly expires_in: number;
   readonly user: AuthUser;
 }
 
@@ -23,10 +27,10 @@ export interface LoginResponse {
 // ---------------------------------------------------------------------------
 
 export async function login(req: LoginRequest): Promise<LoginResponse> {
-  const response = await fetch(`${BASE_URL}/auth/login`, {
+  const response = await fetch(`${AUTH_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: req.token }),
+    body: JSON.stringify({ username: req.username, password: req.password }),
   });
 
   if (!response.ok) {
@@ -37,8 +41,7 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
     );
   }
 
-  const data: LoginResponse = (await response.json()) as LoginResponse;
-  return data;
+  return (await response.json()) as LoginResponse;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +49,7 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
 // ---------------------------------------------------------------------------
 
 export async function fetchMe(token: string): Promise<AuthUser> {
-  const response = await fetch(`${BASE_URL}/auth/me`, {
+  const response = await fetch(`${AUTH_BASE_URL}/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
       accept: "application/json",
@@ -61,8 +64,7 @@ export async function fetchMe(token: string): Promise<AuthUser> {
     );
   }
 
-  const data: AuthUser = (await response.json()) as AuthUser;
-  return data;
+  return (await response.json()) as AuthUser;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,13 +72,35 @@ export async function fetchMe(token: string): Promise<AuthUser> {
 // ---------------------------------------------------------------------------
 
 export async function logout(token: string): Promise<void> {
-  await fetch(`${BASE_URL}/auth/logout`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  try {
+    await fetch(`${AUTH_BASE_URL}/auth/logout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch {
+    // Best-effort.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Token storage
+// ---------------------------------------------------------------------------
+
+const TOKEN_KEY = "forge_token";
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function storeToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 // ---------------------------------------------------------------------------

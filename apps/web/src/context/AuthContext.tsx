@@ -11,6 +11,9 @@ import {
   fetchMe,
   login as apiLogin,
   logout as apiLogout,
+  getStoredToken,
+  storeToken,
+  clearToken,
   type AuthUser,
 } from "../lib/auth";
 import { setAuthToken, onUnauthorized } from "../lib/api";
@@ -24,7 +27,7 @@ export interface AuthState {
 }
 
 export interface AuthContextValue extends AuthState {
-  readonly login: (token: string) => Promise<void>;
+  readonly login: (username: string, password: string) => Promise<void>;
   readonly logout: () => Promise<void>;
   readonly refreshUser: () => Promise<void>;
 }
@@ -56,11 +59,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
   const [state, setState] = useState<AuthState>(initialState);
   const tokenRef = useRef<string | null>(null);
 
-  // -----------------------------------------------------------------------
-  // Bootstrap: try restoring a saved session.
-  // -----------------------------------------------------------------------
+  // Bootstrap: restore saved token.
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("auth_token");
+    const savedToken = getStoredToken();
     if (savedToken !== null) {
       tokenRef.current = savedToken;
       setAuthToken(savedToken);
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
           });
         })
         .catch(() => {
-          sessionStorage.removeItem("auth_token");
+          clearToken();
           tokenRef.current = null;
           setAuthToken(null);
           setState({
@@ -92,13 +93,11 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
     }
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Register the 401/403 handler once.
-  // -----------------------------------------------------------------------
+  // Register 401/403 handler.
   useEffect(() => {
     onUnauthorized(() => {
       if (tokenRef.current !== null) {
-        sessionStorage.removeItem("auth_token");
+        clearToken();
         tokenRef.current = null;
         setAuthToken(null);
         setState({
@@ -112,33 +111,19 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
     });
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Login
-  // -----------------------------------------------------------------------
-  const login = useCallback(async (rawToken: string) => {
+  // Login with username/password.
+  const login = useCallback(async (username: string, password: string) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      let token = rawToken;
-      let user: AuthUser;
+      const resp = await apiLogin({ username, password });
 
-      try {
-        const loginResp = await apiLogin({ token: rawToken });
-        token = loginResp.token;
-        user = loginResp.user;
-      } catch {
-        // Login endpoint may not exist (404). Fall back to treating the
-        // raw token as a Bearer token and verifying it.
-        user = await fetchMe(rawToken);
-        token = rawToken;
-      }
-
-      tokenRef.current = token;
-      setAuthToken(token);
-      sessionStorage.setItem("auth_token", token);
+      tokenRef.current = resp.access_token;
+      setAuthToken(resp.access_token);
+      storeToken(resp.access_token);
       setState({
-        user,
-        token,
+        user: resp.user,
+        token: resp.access_token,
         isLoading: false,
         isAuthenticated: true,
         error: null,
@@ -158,14 +143,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
     }
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Logout
-  // -----------------------------------------------------------------------
+  // Logout.
   const logout = useCallback(async () => {
     const currentToken = tokenRef.current;
     tokenRef.current = null;
     setAuthToken(null);
-    sessionStorage.removeItem("auth_token");
+    clearToken();
     setState({
       user: null,
       token: null,
@@ -183,9 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
     }
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Refresh user
-  // -----------------------------------------------------------------------
+  // Refresh user.
   const refreshUser = useCallback(async () => {
     const currentToken = tokenRef.current;
     if (currentToken === null) return;
@@ -194,9 +175,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
       const user = await fetchMe(currentToken);
       setState((prev) => ({ ...prev, user }));
     } catch {
+      clearToken();
       tokenRef.current = null;
       setAuthToken(null);
-      sessionStorage.removeItem("auth_token");
       setState({
         user: null,
         token: null,
@@ -207,9 +188,6 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactNode {
     }
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Value
-  // -----------------------------------------------------------------------
   const value = useMemo<AuthContextValue>(
     () => ({
       user: state.user,

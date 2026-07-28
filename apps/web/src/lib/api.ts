@@ -5,14 +5,24 @@ const BASE_URL: string =
 // Auth token management (set by AuthContext on login/logout)
 // ---------------------------------------------------------------------------
 
-let _token: string | null = null;
+const TOKEN_KEY = "forge_token";
+
+let _token: string | null = localStorage.getItem(TOKEN_KEY);
 let _onUnauthorized: (() => void) | null = null;
 
 export function setAuthToken(token: string | null): void {
   _token = token;
+  if (token !== null) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 export function getAuthToken(): string | null {
+  if (_token === null) {
+    _token = localStorage.getItem(TOKEN_KEY);
+  }
   return _token;
 }
 
