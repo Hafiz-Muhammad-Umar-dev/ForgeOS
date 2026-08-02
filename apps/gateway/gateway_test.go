@@ -7,11 +7,54 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/auth"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/store"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
 )
+
+// testIntentRow is a store.Row that scans a populated intent.
+type testIntentRow struct {
+	id string
+}
+
+func (r *testIntentRow) Scan(dest ...any) error {
+	now := time.Now()
+	*(dest[0].(*string)) = r.id
+	*(dest[1].(*string)) = "dev-admin"
+	*(dest[2].(*string)) = "org-1"
+	*(dest[3].(*string)) = ""
+	*(dest[4].(*string)) = ""
+	*(dest[5].(*string)) = "Build auth"
+	*(dest[6].(*string)) = "pending"
+	*(dest[7].(*string)) = ""
+	*(dest[8].(*string)) = ""
+	*(dest[9].(*time.Time)) = now
+	*(dest[10].(*time.Time)) = now
+	return nil
+}
+
+// newTestIntentsService builds an intents service backed by an in-memory store.
+func newTestIntentsService() *intents.Service {
+	fs := store.NewFakeStore()
+	fs.QueryRowFunc = func(ctx context.Context, sql string, args ...any) store.Row {
+		return &testIntentRow{id: args[0].(string)}
+	}
+	fs.QueryFunc = func(ctx context.Context, sql string, args ...any) (store.Rows, error) {
+		return &storeEmptyRows{}, nil
+	}
+	return intents.NewService(intents.NewRepository(fs))
+}
+
+// storeEmptyRows is a store.Rows that yields no rows.
+type storeEmptyRows struct{}
+
+func (r *storeEmptyRows) Next() bool { return false }
+func (r *storeEmptyRows) Scan(dest ...any) error { return nil }
+func (r *storeEmptyRows) Close() {}
 
 // ---------------------------------------------------------------------------
 // Test ingress stub
@@ -38,7 +81,7 @@ func newTestGateway(t *testing.T, provider auth.AuthProvider) *Gateway {
 	t.Helper()
 	cfg := DefaultGatewayConfig()
 	cfg.ListenAddr = ":0" // random port (won't actually be used with httptest)
-	return NewGateway(cfg, provider, &testIngress{})
+	return NewGateway(cfg, provider, &testIngress{}, newTestIntentsService())
 }
 
 func serveGateway(t *testing.T, g *Gateway) *httptest.Server {
@@ -146,7 +189,7 @@ func TestGatewaySubmitIntentInjectsClaimsIdentity(t *testing.T) {
 		Scopes:  []string{"intent:write"},
 	}
 
-	g := NewGateway(DefaultGatewayConfig(), provider, ing)
+	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService())
 	srv := serveGateway(t, g)
 	defer srv.Close()
 
@@ -178,7 +221,7 @@ func TestGatewaySubmitIntentUserIDOverride(t *testing.T) {
 	provider := auth.NewFakeAuthProvider()
 	provider.ClaimsValue = auth.Claims{Subject: "jwt-user", OrgID: "jwt-org"}
 
-	g := NewGateway(DefaultGatewayConfig(), provider, ing)
+	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService())
 	srv := serveGateway(t, g)
 	defer srv.Close()
 
@@ -245,7 +288,7 @@ func TestGatewayReadyz(t *testing.T) {
 
 func TestGatewayLifecycle(t *testing.T) {
 	provider := auth.NewFakeAuthProvider()
-	g := NewGateway(DefaultGatewayConfig(), provider, &testIngress{})
+	g := NewGateway(DefaultGatewayConfig(), provider, &testIngress{}, newTestIntentsService())
 
 	if g.Name() != "gateway" {
 		t.Errorf("name=%s", g.Name())
@@ -277,21 +320,21 @@ func TestGatewayLifecycle(t *testing.T) {
 }
 
 func TestGatewayInitNoAddress(t *testing.T) {
-	g := NewGateway(GatewayConfig{ListenAddr: ""}, auth.NewFakeAuthProvider(), &testIngress{})
+	g := NewGateway(GatewayConfig{ListenAddr: ""}, auth.NewFakeAuthProvider(), &testIngress{}, newTestIntentsService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error with empty listen address")
 	}
 }
 
 func TestGatewayInitNoAuthProvider(t *testing.T) {
-	g := NewGateway(DefaultGatewayConfig(), nil, &testIngress{})
+	g := NewGateway(DefaultGatewayConfig(), nil, &testIngress{}, newTestIntentsService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error without auth provider")
 	}
 }
 
 func TestGatewayInitNoIngress(t *testing.T) {
-	g := NewGateway(DefaultGatewayConfig(), auth.NewFakeAuthProvider(), nil)
+	g := NewGateway(DefaultGatewayConfig(), auth.NewFakeAuthProvider(), nil, newTestIntentsService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error without ingress")
 	}

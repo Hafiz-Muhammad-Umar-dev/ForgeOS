@@ -211,10 +211,10 @@ func (g *Gateway) handleSubmitIntent(w http.ResponseWriter, r *http.Request) {
 		log.Printf("gateway: publish intent: %v", err)
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"intent_id": intent.ID,
-		"status":    "pending",
-		"trace_id":  result.TraceID,
+	writeJSON(w, http.StatusCreated, ingress.IntentResult{
+		IntentID: intent.ID,
+		Status:   "accepted",
+		TraceID:  result.TraceID,
 	})
 }
 
