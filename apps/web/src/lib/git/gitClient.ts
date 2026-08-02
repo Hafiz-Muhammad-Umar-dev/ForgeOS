@@ -3,6 +3,8 @@ import type { GitStatus, GitBranch, GitCommit, GitDiff, GitFile, GitMetrics } fr
 const BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/v1";
 
+const TOKEN_KEY = "forge_token";
+
 let backendAvailable = true;
 
 export function isGitBackendAvailable(): boolean {
@@ -14,7 +16,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    const token = sessionStorage.getItem("auth_token");
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token !== null) {
       headers["authorization"] = `Bearer ${token}`;
     }

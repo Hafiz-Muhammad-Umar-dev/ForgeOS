@@ -25,9 +25,9 @@ func main() {
 	// Configuration from environment.
 	jwtSecret := os.Getenv("DEVOS_JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "devos-development-secret"
-		log.Println("WARNING: using default JWT secret. Set DEVOS_JWT_SECRET for production.")
+		log.Fatal("DEVOS_JWT_SECRET is required. Set it to the same value used by the auth service.")
 	}
+	log.Printf("gateway: using JWT secret (len=%d)", len(jwtSecret))
 
 	natsURL := os.Getenv("DEVOS_NATS_URL")
 	if natsURL == "" {

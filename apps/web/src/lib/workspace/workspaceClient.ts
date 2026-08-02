@@ -3,12 +3,14 @@ import type { WorkspaceFile, WorkspaceFolder, FileContent } from "../../types/wo
 const BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/v1";
 
+const TOKEN_KEY = "forge_token";
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = (window as unknown as Record<string, string>)["__auth_token"];
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (token !== "") {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token !== null) {
     headers["authorization"] = `Bearer ${token}`;
   }
 

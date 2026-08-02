@@ -1,7 +1,4 @@
 // Package gateway implements the DevOS API Gateway HTTP server.
-// It wraps the Intent Ingress with authentication middleware and exposes
-// health endpoints. The Gateway implements lifecycle.Component for
-// kernel integration.
 package gateway
 
 import (
@@ -10,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,12 +17,8 @@ import (
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
 )
 
-// Compile-time check.
 var _ lifecycle.Component = (*Gateway)(nil)
 
-// Gateway is the API Gateway HTTP server. It authenticates requests via
-// AuthProvider, routes authenticated intents to the Intent Ingress, and
-// exposes health endpoints. It implements lifecycle.Component.
 type Gateway struct {
 	config   GatewayConfig
 	provider auth.AuthProvider
@@ -32,9 +26,9 @@ type Gateway struct {
 	server   *http.Server
 	mu       sync.RWMutex
 	intents  []IntentItem
+	tasks    []TaskItem
 }
 
-// IntentItem is a lightweight intent summary returned by GET /v1/intents.
 type IntentItem struct {
 	ID        string    `json:"id"`
 	Title     string    `json:"title"`
@@ -42,13 +36,19 @@ type IntentItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// GatewayConfig configures the Gateway HTTP server.
+type TaskItem struct {
+	ID        string    `json:"id"`
+	IntentID  string    `json:"intent_id"`
+	Summary   string    `json:"summary"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type GatewayConfig struct {
 	ListenAddr      string
 	ShutdownTimeout time.Duration
 }
 
-// DefaultGatewayConfig returns a sensible default configuration.
 func DefaultGatewayConfig() GatewayConfig {
 	return GatewayConfig{
 		ListenAddr:      ":8080",
@@ -56,17 +56,16 @@ func DefaultGatewayConfig() GatewayConfig {
 	}
 }
 
-// NewGateway creates a new Gateway server.
 func NewGateway(cfg GatewayConfig, provider auth.AuthProvider, ing ingress.IntentIngress) *Gateway {
 	return &Gateway{
 		config:   cfg,
 		provider: provider,
 		ingress:  ing,
 		intents:  seedIntents(),
+		tasks:    seedTasks(),
 	}
 }
 
-// seedIntents returns mock data when no database is available.
 func seedIntents() []IntentItem {
 	return []IntentItem{
 		{ID: "intent-1", Title: "Build authentication flow", Status: "running", CreatedAt: time.Now().Add(-2 * time.Hour)},
@@ -77,21 +76,23 @@ func seedIntents() []IntentItem {
 	}
 }
 
-// RecordIntent stores a newly created intent in the mock list.
+func seedTasks() []TaskItem {
+	return []TaskItem{
+		{ID: "task-1", IntentID: "intent-1", Summary: "Design auth schema", Status: "completed", CreatedAt: time.Now().Add(-2 * time.Hour)},
+		{ID: "task-2", IntentID: "intent-1", Summary: "Implement JWT signing", Status: "running", CreatedAt: time.Now().Add(-1 * time.Hour)},
+		{ID: "task-3", IntentID: "intent-1", Summary: "Write integration tests", Status: "pending", CreatedAt: time.Now().Add(-30 * time.Minute)},
+		{ID: "task-4", IntentID: "intent-2", Summary: "Route planning", Status: "completed", CreatedAt: time.Now().Add(-24 * time.Hour)},
+		{ID: "task-5", IntentID: "intent-3", Summary: "Schema migration", Status: "completed", CreatedAt: time.Now().Add(-48 * time.Hour)},
+	}
+}
+
 func (g *Gateway) RecordIntent(id, title string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.intents = append(g.intents, IntentItem{
-		ID:        id,
-		Title:     title,
-		Status:    "pending",
-		CreatedAt: time.Now(),
+		ID: id, Title: title, Status: "pending", CreatedAt: time.Now(),
 	})
 }
-
-// ---------------------------------------------------------------------------
-// Lifecycle
-// ---------------------------------------------------------------------------
 
 func (g *Gateway) Name() string { return "gateway" }
 
@@ -110,29 +111,25 @@ func (g *Gateway) Init(_ context.Context) error {
 
 func (g *Gateway) Start(_ context.Context) error {
 	mux := http.NewServeMux()
-
-	// Wrap the authenticated handler dispatcher.
 	authMW := middleware.Authenticate(g.provider, http.HandlerFunc(g.handleAuthenticated))
 
-	// Authenticated routes
-	mux.Handle("/v1/intents", authMW)
+	mux.Handle("GET /v1/intents", authMW)
+	mux.Handle("POST /v1/intents", authMW)
+	mux.Handle("GET /v1/tasks", authMW)
+	mux.Handle("/v1/{rest...}", authMW)
 
-	// Health routes (no auth)
 	mux.HandleFunc("/healthz", g.handleHealthz)
 	mux.HandleFunc("/readyz", g.handleReadyz)
 
-	g.server = &http.Server{
-		Addr:    g.config.ListenAddr,
-		Handler: mux,
-	}
+	srv := &http.Server{Addr: g.config.ListenAddr, Handler: mux}
+	g.server = srv
 
 	go func() {
 		log.Printf("gateway: listening on %s", g.config.ListenAddr)
-		if err := g.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("gateway: server error: %v", err)
 		}
 	}()
-
 	return nil
 }
 
@@ -159,13 +156,20 @@ func (g *Gateway) Health() lifecycle.Health {
 // ---------------------------------------------------------------------------
 
 func (g *Gateway) handleAuthenticated(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
+	path := r.URL.Path
+	method := r.Method
+
+	switch {
+	case path == "/v1/intents" && method == http.MethodGet:
 		g.handleListIntents(w, r)
-	case http.MethodPost:
+	case path == "/v1/intents" && method == http.MethodPost:
 		g.handleSubmitIntent(w, r)
+	case strings.HasPrefix(path, "/v1/intents/") && method == http.MethodGet:
+		g.handleGetIntentByPath(w, r, path)
+	case path == "/v1/tasks" && method == http.MethodGet:
+		g.handleListTasks(w, r)
 	default:
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		g.handleV1Mock(w, r, path, method)
 	}
 }
 
@@ -176,16 +180,28 @@ func (g *Gateway) handleAuthenticated(w http.ResponseWriter, r *http.Request) {
 func (g *Gateway) handleListIntents(w http.ResponseWriter, r *http.Request) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	writeJSON(w, http.StatusOK, g.intents)
+}
 
-	var result []IntentItem
-	if len(g.intents) > 0 {
-		result = g.intents
-	} else {
-		result = seedIntents()
+// ---------------------------------------------------------------------------
+// GET /v1/intents/{id}
+// ---------------------------------------------------------------------------
+
+func (g *Gateway) handleGetIntentByPath(w http.ResponseWriter, r *http.Request, path string) {
+	id := strings.TrimPrefix(path, "/v1/intents/")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "id is required")
+		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	for _, intent := range g.intents {
+		if intent.ID == id {
+			writeJSON(w, http.StatusOK, intent)
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "intent not found")
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +210,6 @@ func (g *Gateway) handleListIntents(w http.ResponseWriter, r *http.Request) {
 
 func (g *Gateway) handleSubmitIntent(w http.ResponseWriter, r *http.Request) {
 	claims, _ := middleware.ClaimsFromContext(r.Context())
-
 	var req struct {
 		Text      string `json:"text"`
 		UserID    string `json:"user_id"`
@@ -202,37 +217,46 @@ func (g *Gateway) handleSubmitIntent(w http.ResponseWriter, r *http.Request) {
 		ProjectID string `json:"project_id"`
 		TraceID   string `json:"trace_id"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
-
 	userID := req.UserID
 	if userID == "" {
 		userID = claims.Subject
 	}
-
 	payload := ingress.IntentPayload{
-		Text:      req.Text,
-		UserID:    userID,
-		OrgID:     claims.OrgID,
-		ProjectID: req.ProjectID,
-		TraceID:   req.TraceID,
+		Text: req.Text, UserID: userID, OrgID: claims.OrgID,
+		ProjectID: req.ProjectID, TraceID: req.TraceID,
 	}
-
 	result, err := g.ingress.SubmitIntent(r.Context(), payload)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Record in mock list.
 	g.RecordIntent(result.IntentID, req.Text)
+	writeJSON(w, http.StatusCreated, result)
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(result)
+// ---------------------------------------------------------------------------
+// GET /v1/tasks?intentId=
+// ---------------------------------------------------------------------------
+
+func (g *Gateway) handleListTasks(w http.ResponseWriter, r *http.Request) {
+	intentID := r.URL.Query().Get("intentId")
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if intentID != "" {
+		var filtered []TaskItem
+		for _, t := range g.tasks {
+			if t.IntentID == intentID {
+				filtered = append(filtered, t)
+			}
+		}
+		writeJSON(w, http.StatusOK, filtered)
+		return
+	}
+	writeJSON(w, http.StatusOK, g.tasks)
 }
 
 // ---------------------------------------------------------------------------
