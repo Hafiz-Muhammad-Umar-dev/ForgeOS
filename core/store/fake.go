@@ -50,6 +50,9 @@ func (f *FakeStore) Query(ctx context.Context, sql string, args ...any) (Rows, e
 }
 
 func (f *FakeStore) QueryRow(ctx context.Context, sql string, args ...any) Row {
+	f.mu.Lock()
+	f.RecordedQueries = append(f.RecordedQueries, recordedQuery{SQL: sql, Args: args})
+	f.mu.Unlock()
 	if f.QueryRowFunc != nil {
 		return f.QueryRowFunc(ctx, sql, args...)
 	}
