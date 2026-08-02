@@ -22,7 +22,7 @@ mise install            # install pinned Go / Node / Python + tooling
 task --list             # list available tasks
 ```
 
-Module import path (matches the git remote): `github.com/Hafiz-Muhammad-Umar12/ForgeOS`.
+Module import path (matches the git remote): `https://github.com/Hafiz-Muhammad-Umar-dev/ForgeOS`.
 See [Repository Layout](#repository-layout) and [Sprint Status](#sprint-status).
 
 ---
