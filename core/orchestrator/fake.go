@@ -7,7 +7,7 @@ import (
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/agent"
 )
 
-// Compile-time check.
+// Compile-time check
 var _ TaskRunner = (*FakeRunner)(nil)
 
 // FakeRunner is an in-memory TaskRunner implementation for testing.
