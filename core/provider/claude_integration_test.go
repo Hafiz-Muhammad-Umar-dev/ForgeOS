@@ -104,7 +104,7 @@ func TestIntegrationClaudeSystemPrompt(t *testing.T) {
 	cl := NewClaude(WithClaudeAPIKey(apiKey))
 
 	resp, err := cl.Complete(context.Background(), CompletionRequest{
-		Model: "claude-sonnet-4-20250514",
+		Model:  "claude-sonnet-4-20250514",
 		System: "You are a terse assistant. Reply in as few words as possible.",
 		Messages: []Message{
 			{Role: RoleUser, Content: "What color is the sky?"},

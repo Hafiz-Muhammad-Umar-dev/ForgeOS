@@ -7,9 +7,9 @@ import (
 
 // Compile-time checks.
 var (
-	_ NotificationPort  = (*FakeNotification)(nil)
-	_ ChannelProvider   = (*FakeChannelProvider)(nil)
-	_ Renderer          = (*FakeRenderer)(nil)
+	_ NotificationPort = (*FakeNotification)(nil)
+	_ ChannelProvider  = (*FakeChannelProvider)(nil)
+	_ Renderer         = (*FakeRenderer)(nil)
 )
 
 // FakeNotification is an in-memory NotificationPort for testing.

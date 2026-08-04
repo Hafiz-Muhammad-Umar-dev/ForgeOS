@@ -27,11 +27,11 @@ const (
 
 // Message is the JSON frame exchanged over WebSocket.
 type Message struct {
-	Type     string          `json:"type"`
-	IntentID string          `json:"intent_id,omitempty"`
-	SessionID string         `json:"session_id,omitempty"`
-	Data     json.RawMessage `json:"data,omitempty"`
-	Error    string          `json:"error,omitempty"`
+	Type      string          `json:"type"`
+	IntentID  string          `json:"intent_id,omitempty"`
+	SessionID string          `json:"session_id,omitempty"`
+	Data      json.RawMessage `json:"data,omitempty"`
+	Error     string          `json:"error,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

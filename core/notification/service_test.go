@@ -17,24 +17,36 @@ import (
 
 type testBus struct {
 	mu          sync.Mutex
-	subHandlers []struct{ subject string; handler bus.MessageHandler }
-	published   []struct{ subject string; data []byte }
-	connected   bool
+	subHandlers []struct {
+		subject string
+		handler bus.MessageHandler
+	}
+	published []struct {
+		subject string
+		data    []byte
+	}
+	connected bool
 }
 
 func (b *testBus) Connect(_ context.Context) error { return nil }
-func (b *testBus) IsConnected() bool                { return b.connected }
-func (b *testBus) Close(_ context.Context) error     { return nil }
+func (b *testBus) IsConnected() bool               { return b.connected }
+func (b *testBus) Close(_ context.Context) error   { return nil }
 func (b *testBus) Publish(_ context.Context, subject string, data []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.published = append(b.published, struct{ subject string; data []byte }{subject, data})
+	b.published = append(b.published, struct {
+		subject string
+		data    []byte
+	}{subject, data})
 	return nil
 }
 func (b *testBus) Subscribe(_ context.Context, subject string, handler bus.MessageHandler) (bus.Subscription, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.subHandlers = append(b.subHandlers, struct{ subject string; handler bus.MessageHandler }{subject, handler})
+	b.subHandlers = append(b.subHandlers, struct {
+		subject string
+		handler bus.MessageHandler
+	}{subject, handler})
 	return &testSub{subject: subject}, nil
 }
 

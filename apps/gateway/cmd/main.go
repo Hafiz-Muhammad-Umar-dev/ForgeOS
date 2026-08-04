@@ -21,6 +21,7 @@ import (
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/store"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/workspacefs"
 )
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 		}
 		defer pg.Close(ctx)
 
-		migrator := store.NewMigrator(pg, intents.Migrations())
+		migrator := store.NewMigrator(pg, append(intents.Migrations(), workspacefs.Migrations()...))
 		if err := migrator.Run(ctx); err != nil {
 			log.Fatalf("run migrations: %v", err)
 		}
@@ -70,6 +71,10 @@ func main() {
 	intentsRepo := intents.NewRepository(db)
 	intentsSvc := intents.NewService(intentsRepo)
 
+	// Build the workspace file service.
+	workspaceRepo := workspacefs.NewRepository(db)
+	workspaceSvc := workspacefs.NewService(workspaceRepo)
+
 	// Connect to the bus for the ingress.
 	bus := ingressBus.NewNatsBus(ingressBus.WithNatsURL(natsURL))
 	if err := bus.Connect(ctx); err != nil {
@@ -82,7 +87,7 @@ func main() {
 	cfg := gw.DefaultGatewayConfig()
 	cfg.ListenAddr = listenAddr
 
-	gateway := gw.NewGateway(cfg, provider, ing, intentsSvc)
+	gateway := gw.NewGateway(cfg, provider, ing, intentsSvc, workspaceSvc)
 
 	if err := gateway.Init(ctx); err != nil {
 		log.Fatalf("init: %v", err)

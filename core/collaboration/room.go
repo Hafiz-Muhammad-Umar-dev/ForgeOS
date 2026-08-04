@@ -10,8 +10,8 @@ import (
 type MessageType int
 
 const (
-	MessageUpdate     MessageType = iota // Binary document update (Yjs update)
-	MessageAwareness                     // Awareness state change
+	MessageUpdate    MessageType = iota // Binary document update (Yjs update)
+	MessageAwareness                    // Awareness state change
 )
 
 // Room manages a set of sessions joined to the same intent. It receives

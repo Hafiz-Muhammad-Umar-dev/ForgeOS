@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/auth"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/store"
-	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/workspacefs"
 )
 
 // testIntentRow is a store.Row that scans a populated intent.
@@ -49,12 +50,17 @@ func newTestIntentsService() *intents.Service {
 	return intents.NewService(intents.NewRepository(fs))
 }
 
+// newTestWorkspaceService builds a workspacefs service backed by an in-memory store.
+func newTestWorkspaceService() *workspacefs.Service {
+	return workspacefs.NewService(workspacefs.NewRepository(store.NewFakeStore()))
+}
+
 // storeEmptyRows is a store.Rows that yields no rows.
 type storeEmptyRows struct{}
 
-func (r *storeEmptyRows) Next() bool { return false }
+func (r *storeEmptyRows) Next() bool             { return false }
 func (r *storeEmptyRows) Scan(dest ...any) error { return nil }
-func (r *storeEmptyRows) Close() {}
+func (r *storeEmptyRows) Close()                 {}
 
 // ---------------------------------------------------------------------------
 // Test ingress stub
@@ -81,7 +87,7 @@ func newTestGateway(t *testing.T, provider auth.AuthProvider) *Gateway {
 	t.Helper()
 	cfg := DefaultGatewayConfig()
 	cfg.ListenAddr = ":0" // random port (won't actually be used with httptest)
-	return NewGateway(cfg, provider, &testIngress{}, newTestIntentsService())
+	return NewGateway(cfg, provider, &testIngress{}, newTestIntentsService(), newTestWorkspaceService())
 }
 
 func serveGateway(t *testing.T, g *Gateway) *httptest.Server {
@@ -189,7 +195,7 @@ func TestGatewaySubmitIntentInjectsClaimsIdentity(t *testing.T) {
 		Scopes:  []string{"intent:write"},
 	}
 
-	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService())
+	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService(), newTestWorkspaceService())
 	srv := serveGateway(t, g)
 	defer srv.Close()
 
@@ -221,7 +227,7 @@ func TestGatewaySubmitIntentUserIDOverride(t *testing.T) {
 	provider := auth.NewFakeAuthProvider()
 	provider.ClaimsValue = auth.Claims{Subject: "jwt-user", OrgID: "jwt-org"}
 
-	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService())
+	g := NewGateway(DefaultGatewayConfig(), provider, ing, newTestIntentsService(), newTestWorkspaceService())
 	srv := serveGateway(t, g)
 	defer srv.Close()
 
@@ -288,7 +294,7 @@ func TestGatewayReadyz(t *testing.T) {
 
 func TestGatewayLifecycle(t *testing.T) {
 	provider := auth.NewFakeAuthProvider()
-	g := NewGateway(DefaultGatewayConfig(), provider, &testIngress{}, newTestIntentsService())
+	g := NewGateway(DefaultGatewayConfig(), provider, &testIngress{}, newTestIntentsService(), newTestWorkspaceService())
 
 	if g.Name() != "gateway" {
 		t.Errorf("name=%s", g.Name())
@@ -320,21 +326,21 @@ func TestGatewayLifecycle(t *testing.T) {
 }
 
 func TestGatewayInitNoAddress(t *testing.T) {
-	g := NewGateway(GatewayConfig{ListenAddr: ""}, auth.NewFakeAuthProvider(), &testIngress{}, newTestIntentsService())
+	g := NewGateway(GatewayConfig{ListenAddr: ""}, auth.NewFakeAuthProvider(), &testIngress{}, newTestIntentsService(), newTestWorkspaceService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error with empty listen address")
 	}
 }
 
 func TestGatewayInitNoAuthProvider(t *testing.T) {
-	g := NewGateway(DefaultGatewayConfig(), nil, &testIngress{}, newTestIntentsService())
+	g := NewGateway(DefaultGatewayConfig(), nil, &testIngress{}, newTestIntentsService(), newTestWorkspaceService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error without auth provider")
 	}
 }
 
 func TestGatewayInitNoIngress(t *testing.T) {
-	g := NewGateway(DefaultGatewayConfig(), auth.NewFakeAuthProvider(), nil, newTestIntentsService())
+	g := NewGateway(DefaultGatewayConfig(), auth.NewFakeAuthProvider(), nil, newTestIntentsService(), newTestWorkspaceService())
 	if err := g.Init(context.Background()); err == nil {
 		t.Fatal("expected error without ingress")
 	}

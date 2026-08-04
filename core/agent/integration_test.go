@@ -90,7 +90,7 @@ func TestIntegrationRuntimeFullCycle(t *testing.T) {
 func TestIntegrationAgentWithToolExecution(t *testing.T) {
 	llm := provider.NewFakeProvider(
 		provider.CompletionResponse{
-			Message: provider.Message{Role: provider.RoleAssistant, Content: "Let me run a command.\n```tool\n{\"name\": \"execute_command\", \"args\": {\"command\": \"echo success\"}}\n```\n"},
+			Message:      provider.Message{Role: provider.RoleAssistant, Content: "Let me run a command.\n```tool\n{\"name\": \"execute_command\", \"args\": {\"command\": \"echo success\"}}\n```\n"},
 			FinishReason: "tool_use",
 		},
 		provider.CompletionResponse{

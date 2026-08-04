@@ -14,11 +14,11 @@ var _ DeployProvider = (*VercelAdapter)(nil)
 
 // VercelAdapter is a DeployProvider that deploys to Vercel using Deploy Hooks.
 type VercelAdapter struct {
-	hookURL  string
-	token    string
-	teamID   string
-	baseURL  string
-	client   *http.Client
+	hookURL string
+	token   string
+	teamID  string
+	baseURL string
+	client  *http.Client
 }
 
 // VercelConfig configures the Vercel deploy adapter.
@@ -173,8 +173,8 @@ func (v *VercelAdapter) deployViaAPI(ctx context.Context, req DeployRequest) (De
 	}
 
 	body := map[string]any{
-		"name":             req.ProjectName,
-		"gitSource":        map[string]string{"type": "github", "repoUrl": req.Source},
+		"name":                 req.ProjectName,
+		"gitSource":            map[string]string{"type": "github", "repoUrl": req.Source},
 		"environmentVariables": req.Env,
 	}
 	data, _ := json.Marshal(body)

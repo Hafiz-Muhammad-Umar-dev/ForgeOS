@@ -52,9 +52,9 @@ func (r *intentRow) Scan(dest ...any) error {
 // emptyRows is a store.Rows that yields no rows.
 type emptyRows struct{}
 
-func (r *emptyRows) Next() bool { return false }
+func (r *emptyRows) Next() bool             { return false }
 func (r *emptyRows) Scan(dest ...any) error { return nil }
-func (r *emptyRows) Close() {}
+func (r *emptyRows) Close()                 {}
 
 // TestRepositoryCreateIntent verifies the repository issues an INSERT.
 func TestRepositoryCreateIntent(t *testing.T) {

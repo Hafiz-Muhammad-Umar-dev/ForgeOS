@@ -6,9 +6,9 @@ import (
 
 func TestValidDAG(t *testing.T) {
 	d := &DAG{
-		ID:        "dag-1",
-		IntentID:  "intent-1",
-		Status:    DAGProposed,
+		ID:       "dag-1",
+		IntentID: "intent-1",
+		Status:   DAGProposed,
 		Nodes: []Node{
 			{ID: "a", Name: "Node A", Agent: "agent-1", Description: "do A"},
 			{ID: "b", Name: "Node B", Agent: "agent-2", Description: "do B", InputIDs: []string{"a"}},
@@ -147,9 +147,9 @@ func TestNodePayload(t *testing.T) {
 
 func TestDAGStaging(t *testing.T) {
 	d := &DAG{
-		ID:       "dag-test",
-		Status:   DAGProposed,
-		Nodes:    []Node{{ID: "a", Agent: "x"}},
+		ID:     "dag-test",
+		Status: DAGProposed,
+		Nodes:  []Node{{ID: "a", Agent: "x"}},
 	}
 	if d.Status != DAGProposed {
 		t.Errorf("initial status=%s", d.Status)

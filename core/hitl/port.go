@@ -84,6 +84,6 @@ type HITLGate interface {
 
 // Sentinel errors returned by HITLGate implementations.
 var (
-	ErrTimeout        = errors.New("hitl: approval timeout")
-	ErrNotStarted     = errors.New("hitl: not started")
+	ErrTimeout    = errors.New("hitl: approval timeout")
+	ErrNotStarted = errors.New("hitl: not started")
 )

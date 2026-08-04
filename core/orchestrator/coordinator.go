@@ -46,8 +46,8 @@ func (c *Coordinator) ExecuteNode(ctx context.Context, node dag.Node) (*agent.Re
 	}
 
 	task := agent.Task{
-		ID:          node.ID,
-		Description: node.Description,
+		ID:            node.ID,
+		Description:   node.Description,
 		MaxIterations: 3,
 	}
 

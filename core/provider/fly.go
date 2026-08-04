@@ -59,7 +59,7 @@ func NewFlyAdapter(opts ...FlyOption) *FlyAdapter {
 	}
 	return &FlyAdapter{
 		apiToken: cfg.APIToken,
-			baseURL:  cfg.APIBaseURL,
+		baseURL:  cfg.APIBaseURL,
 		appName:  cfg.AppName,
 		orgSlug:  cfg.OrgSlug,
 		client:   &http.Client{Timeout: cfg.Timeout},
@@ -82,9 +82,9 @@ func (f *FlyAdapter) Deploy(ctx context.Context, req DeployRequest) (DeployRespo
 
 	// For Fly.io, trigger a deploy by creating a new release via API.
 	body := map[string]any{
-		"app":     appName,
+		"app":      appName,
 		"strategy": "immediate",
-		"source":  req.Source,
+		"source":   req.Source,
 	}
 	if len(req.Env) > 0 {
 		body["env"] = req.Env
@@ -115,7 +115,7 @@ func (f *FlyAdapter) Deploy(ctx context.Context, req DeployRequest) (DeployRespo
 	}
 
 	var result struct {
-		ID  string `json:"id"`
+		ID string `json:"id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return DeployResponse{}, fmt.Errorf("fly: decode: %w", err)
@@ -172,7 +172,6 @@ func (f *FlyAdapter) getAPIBase() string {
 	}
 	return "https://api.machines.dev"
 }
-
 
 // Capabilities returns Fly.io's capabilities.
 func (f *FlyAdapter) Capabilities() DeployCapabilities {

@@ -16,7 +16,7 @@ import (
 
 // Compile-time checks.
 var (
-	_ IntentIngress      = (*RESTAdapter)(nil)
+	_ IntentIngress       = (*RESTAdapter)(nil)
 	_ lifecycle.Component = (*RESTAdapter)(nil)
 )
 

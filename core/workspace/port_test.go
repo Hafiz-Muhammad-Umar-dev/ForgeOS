@@ -320,9 +320,9 @@ func TestFakeSecretProxyResolveMissing(t *testing.T) {
 
 func TestFakeSecretProxyManySecrets(t *testing.T) {
 	fsp := NewFakeSecretProxy(map[string]string{
-		"API_KEY":     "sk-123",
-		"DATABASE":    "pg://localhost",
-		"SECRET_KEY":  "super-secret",
+		"API_KEY":    "sk-123",
+		"DATABASE":   "pg://localhost",
+		"SECRET_KEY": "super-secret",
 	})
 
 	for key, expected := range map[string]string{

@@ -14,7 +14,7 @@ import (
 
 // Compile-time check.
 var (
-	_ HITLGate          = (*Gate)(nil)
+	_ HITLGate            = (*Gate)(nil)
 	_ lifecycle.Component = (*Gate)(nil)
 )
 
@@ -32,10 +32,10 @@ type Gate struct {
 	store      ApprovalStore
 	defaultTTL time.Duration
 
-	mu       sync.Mutex
-	pending  map[string]chan approvalDecision
-	subs     []bus.Subscription
-	started  bool
+	mu      sync.Mutex
+	pending map[string]chan approvalDecision
+	subs    []bus.Subscription
+	started bool
 }
 
 // NewGate creates a Gate with the given bus and store.

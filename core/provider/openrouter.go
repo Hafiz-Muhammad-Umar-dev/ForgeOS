@@ -113,9 +113,9 @@ type openRouterRequest struct {
 }
 
 type openRouterResponse struct {
-	ID      string              `json:"id"`
-	Choices []openRouterChoice  `json:"choices"`
-	Usage   *openRouterUsage    `json:"usage,omitempty"`
+	ID      string             `json:"id"`
+	Choices []openRouterChoice `json:"choices"`
+	Usage   *openRouterUsage   `json:"usage,omitempty"`
 }
 
 type openRouterChoice struct {

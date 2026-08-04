@@ -2,9 +2,9 @@ package agent
 
 import (
 	"context"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/provider"
 	"strings"
 	"testing"
-	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/provider"
 )
 
 func TestResultStatusValues(t *testing.T) {
@@ -282,24 +282,24 @@ func TestParseToolCall(t *testing.T) {
 			wantArg:  "ls",
 		},
 		{
-			name:     "no tool call",
-			output:   "The answer is 42.",
-			wantNil:  true,
+			name:    "no tool call",
+			output:  "The answer is 42.",
+			wantNil: true,
 		},
 		{
-			name:     "empty output",
-			output:   "",
-			wantNil:  true,
+			name:    "empty output",
+			output:  "",
+			wantNil: true,
 		},
 		{
-			name:     "malformed JSON",
-			output:   "```tool\n{invalid}\n```",
-			wantNil:  true,
+			name:    "malformed JSON",
+			output:  "```tool\n{invalid}\n```",
+			wantNil: true,
 		},
 		{
-			name:     "missing tool name",
-			output:   "```tool\n{\"args\": {\"cmd\": \"ls\"}}\n```",
-			wantNil:  true,
+			name:    "missing tool name",
+			output:  "```tool\n{\"args\": {\"cmd\": \"ls\"}}\n```",
+			wantNil: true,
 		},
 		{
 			name:     "multiple tool blocks - uses first",

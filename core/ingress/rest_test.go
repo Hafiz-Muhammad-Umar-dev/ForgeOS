@@ -25,7 +25,7 @@ type testBus struct {
 
 func (b *testBus) Connect(ctx context.Context) error { return nil }
 func (b *testBus) IsConnected() bool                 { return true }
-func (b *testBus) Close(ctx context.Context) error    { return nil }
+func (b *testBus) Close(ctx context.Context) error   { return nil }
 func (b *testBus) Publish(_ context.Context, subject string, data []byte) error {
 	b.LastSubject = subject
 	b.Published = data

@@ -42,9 +42,9 @@ func DefaultHandlerConfig() HandlerConfig {
 // CollaborationHandler is the HTTP handler for the WebSocket collaboration
 // endpoint at GET /v1/stream.
 type CollaborationHandler struct {
-	cfg      HandlerConfig
-	auth     auth.AuthProvider
-	manager  *collaboration.Manager
+	cfg     HandlerConfig
+	auth    auth.AuthProvider
+	manager *collaboration.Manager
 }
 
 // NewCollaborationHandler creates a new WebSocket collaboration handler.

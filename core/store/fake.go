@@ -22,9 +22,9 @@ type FakeStore struct {
 	// BeginFunc overrides Begin behavior.
 	BeginFunc func(ctx context.Context) (Tx, error)
 
-	mu             sync.Mutex
-	QueryCount     atomic.Int64
-	ExecCount      atomic.Int64
+	mu              sync.Mutex
+	QueryCount      atomic.Int64
+	ExecCount       atomic.Int64
 	RecordedQueries []recordedQuery
 }
 
@@ -77,7 +77,7 @@ func (f *FakeStore) Begin(ctx context.Context) (Tx, error) {
 	return &fakeTx{}, nil
 }
 
-func (f *FakeStore) Ping(_ context.Context) error { return nil }
+func (f *FakeStore) Ping(_ context.Context) error  { return nil }
 func (f *FakeStore) Close(_ context.Context) error { return nil }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ type fakeTx struct{}
 func (t *fakeTx) Query(ctx context.Context, sql string, args ...any) (Rows, error) {
 	return &fakeRows{}, nil
 }
-func (t *fakeTx) QueryRow(ctx context.Context, sql string, args ...any) Row { return &fakeRow{} }
+func (t *fakeTx) QueryRow(ctx context.Context, sql string, args ...any) Row        { return &fakeRow{} }
 func (t *fakeTx) Exec(ctx context.Context, sql string, args ...any) (int64, error) { return 0, nil }
-func (t *fakeTx) Commit(ctx context.Context) error   { return nil }
-func (t *fakeTx) Rollback(ctx context.Context) error { return nil }
+func (t *fakeTx) Commit(ctx context.Context) error                                 { return nil }
+func (t *fakeTx) Rollback(ctx context.Context) error                               { return nil }

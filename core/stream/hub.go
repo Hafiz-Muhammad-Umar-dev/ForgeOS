@@ -14,15 +14,15 @@ import (
 
 // Compile-time checks.
 var (
-	_ Streamer          = (*Hub)(nil)
+	_ Streamer            = (*Hub)(nil)
 	_ lifecycle.Component = (*Hub)(nil)
 )
 
 // subscriber represents a single streaming connection.
 type subscriber struct {
-	id       string
-	intentID string
-	ch       chan event.RawEnvelope
+	id        string
+	intentID  string
+	ch        chan event.RawEnvelope
 	closeOnce sync.Once
 	closed    bool
 	mu        sync.Mutex
@@ -53,11 +53,11 @@ type Hub struct {
 	mu          sync.Mutex
 	subscribers map[string]map[string]*subscriber // intentID → subID → sub
 
-	sub      bus.Subscription
-	events   chan event.RawEnvelope
-	started  bool
-	done     chan struct{}
-	cancel   context.CancelFunc // cancels the dispatch loop context
+	sub     bus.Subscription
+	events  chan event.RawEnvelope
+	started bool
+	done    chan struct{}
+	cancel  context.CancelFunc // cancels the dispatch loop context
 }
 
 // NewHub creates a new streaming hub.

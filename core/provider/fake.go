@@ -131,12 +131,12 @@ var _ DeployProvider = (*FakeDeployProvider)(nil)
 
 // FakeDeployProvider is an in-memory DeployProvider implementation for testing.
 type FakeDeployProvider struct {
-	DeployFunc func(ctx context.Context, req DeployRequest) (DeployResponse, error)
-	StatusFunc func(ctx context.Context, deploymentID string) (DeployStatus, error)
-	DefaultResponse DeployResponse
-	DefaultStatus   DeployStatus
-	DeployCount     atomic.Int64
-	ReceivedRequests []DeployRequest
+	DeployFunc             func(ctx context.Context, req DeployRequest) (DeployResponse, error)
+	StatusFunc             func(ctx context.Context, deploymentID string) (DeployStatus, error)
+	DefaultResponse        DeployResponse
+	DefaultStatus          DeployStatus
+	DeployCount            atomic.Int64
+	ReceivedRequests       []DeployRequest
 	ConfiguredCapabilities *DeployCapabilities
 }
 

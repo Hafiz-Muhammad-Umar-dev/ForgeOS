@@ -17,11 +17,12 @@ var _ Agent = (*SimpleAgent)(nil)
 // until completion or the iteration limit.
 //
 // Tool calling protocol:
-//   The agent outputs a JSON block with the format:
-//     ```tool
-//     {"name": "tool_name", "args": {...}}
-//     ```
-//   The runtime parses this, executes the tool, and feeds the result back.
+//
+//	The agent outputs a JSON block with the format:
+//	  ```tool
+//	  {"name": "tool_name", "args": {...}}
+//	  ```
+//	The runtime parses this, executes the tool, and feeds the result back.
 //
 // When no tool call is detected in the response, the agent treats the
 // response as the final answer and completes.
@@ -61,7 +62,7 @@ func (a *SimpleAgent) Description() string { return a.description }
 
 // Run executes the agent loop: LLM → parse → tool → loop → result.
 func (a *SimpleAgent) Run(ctx Context) (*Result, error) {
-systemPrompt := a.systemPrompt
+	systemPrompt := a.systemPrompt
 	if systemPrompt == "" {
 		systemPrompt = a.buildSystemPrompt(ctx.Tools)
 	}

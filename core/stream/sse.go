@@ -12,7 +12,6 @@ import (
 //	event: <event_type>
 //	id: <event_id>
 //	data: <json_payload>
-//
 func FormatSSE(env event.RawEnvelope) []byte {
 	return []byte(fmt.Sprintf("event: %s\nid: %s\ndata: %s\n\n", env.Type, env.ID, string(env.Payload)))
 }

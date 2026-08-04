@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/lifecycle"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/lifecycle"
 )
 
 // Compile-time checks.
 var (
-	_ Store              = (*PGStore)(nil)
+	_ Store               = (*PGStore)(nil)
 	_ lifecycle.Component = (*PGStore)(nil)
 )
 

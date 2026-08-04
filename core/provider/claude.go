@@ -102,11 +102,11 @@ func NewClaude(opts ...ClaudeOption) *Claude {
 // ---------------------------------------------------------------------------
 
 type anthropicRequest struct {
-	Model     string            `json:"model"`
-	MaxTokens int               `json:"max_tokens"`
-	Messages  []anthropicMsg    `json:"messages"`
-	System    string            `json:"system,omitempty"`
-	Stream    bool              `json:"stream"`
+	Model     string         `json:"model"`
+	MaxTokens int            `json:"max_tokens"`
+	Messages  []anthropicMsg `json:"messages"`
+	System    string         `json:"system,omitempty"`
+	Stream    bool           `json:"stream"`
 }
 
 type anthropicMsg struct {
@@ -115,12 +115,12 @@ type anthropicMsg struct {
 }
 
 type anthropicResponse struct {
-	ID         string            `json:"id"`
-	Type       string            `json:"type"`
-	Role       string            `json:"role"`
-	Content    []anthropicBlock  `json:"content"`
-	StopReason string            `json:"stop_reason"`
-	Usage      anthropicUsage    `json:"usage"`
+	ID         string           `json:"id"`
+	Type       string           `json:"type"`
+	Role       string           `json:"role"`
+	Content    []anthropicBlock `json:"content"`
+	StopReason string           `json:"stop_reason"`
+	Usage      anthropicUsage   `json:"usage"`
 }
 
 type anthropicBlock struct {
@@ -313,7 +313,7 @@ func (c *Claude) readStream(ctx context.Context, body io.ReadCloser, ch chan<- S
 			switch currentEvent {
 			case "message_start":
 				var msgStart struct {
-					Type    string           `json:"type"`
+					Type    string            `json:"type"`
 					Message anthropicResponse `json:"message"`
 				}
 				if err := json.Unmarshal([]byte(dataStr), &msgStart); err != nil {
@@ -354,15 +354,15 @@ func (c *Claude) readStream(ctx context.Context, body io.ReadCloser, ch chan<- S
 				streamUsage = msgDelta.Usage
 
 			case "message_stop":
-					usage := Usage{
-						InputTokens:  streamUsage.InputTokens,
-						OutputTokens: streamUsage.OutputTokens,
-					}
-					if usage.InputTokens == 0 && currentMessage != nil {
-						usage.InputTokens = currentMessage.Usage.InputTokens
-					}
-					ch <- StreamChunk{Done: true, Usage: usage}
-					return
+				usage := Usage{
+					InputTokens:  streamUsage.InputTokens,
+					OutputTokens: streamUsage.OutputTokens,
+				}
+				if usage.InputTokens == 0 && currentMessage != nil {
+					usage.InputTokens = currentMessage.Usage.InputTokens
+				}
+				ch <- StreamChunk{Done: true, Usage: usage}
+				return
 
 			case "error":
 				var apiErr anthropicError

@@ -12,7 +12,7 @@ import (
 
 // Compile-time check.
 var (
-	_ Governor          = (*Service)(nil)
+	_ Governor            = (*Service)(nil)
 	_ lifecycle.Component = (*Service)(nil)
 )
 

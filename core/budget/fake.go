@@ -15,9 +15,9 @@ type FakeGovernor struct {
 	// Ceiling is the token ceiling for all orgs.
 	Ceiling int64
 
-	mu         sync.Mutex
-	usage      map[string]int64 // orgID → total tokens used
-	CheckCount atomic.Int64
+	mu           sync.Mutex
+	usage        map[string]int64 // orgID → total tokens used
+	CheckCount   atomic.Int64
 	ConsumeCount atomic.Int64
 }
 

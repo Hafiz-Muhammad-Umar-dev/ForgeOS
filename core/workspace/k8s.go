@@ -50,9 +50,9 @@ type K8sConfig struct {
 // DefaultK8sConfig returns a sensible default configuration.
 func DefaultK8sConfig() K8sConfig {
 	return K8sConfig{
-		Namespace:     "devos",
-		DefaultImage:  "ubuntu:22.04",
-		PodTimeout:    60 * time.Second,
+		Namespace:    "devos",
+		DefaultImage: "ubuntu:22.04",
+		PodTimeout:   60 * time.Second,
 	}
 }
 
@@ -82,8 +82,8 @@ type K8sWorkspace struct {
 	client K8sClient
 	config K8sConfig
 
-	mu    sync.Mutex
-	pods  map[WorkspaceID]Workspace
+	mu   sync.Mutex
+	pods map[WorkspaceID]Workspace
 }
 
 // NewK8sWorkspace creates a new K8sWorkspace with the given client and options.

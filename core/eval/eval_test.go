@@ -177,15 +177,15 @@ func TestEvaluatorRunAll(t *testing.T) {
 	tasks := []GoldenTask{
 		{
 			Name: "task-1", Description: "first",
-			Task: agent.Task{ID: "all-1", Description: "say hello"},
+			Task:       agent.Task{ID: "all-1", Description: "say hello"},
 			Assertions: []Assertion{AssertNotEmpty()},
-			Timeout: 5 * time.Second,
+			Timeout:    5 * time.Second,
 		},
 		{
 			Name: "task-2", Description: "second",
-			Task: agent.Task{ID: "all-2", Description: "say world"},
+			Task:       agent.Task{ID: "all-2", Description: "say world"},
 			Assertions: []Assertion{AssertNotEmpty()},
-			Timeout: 5 * time.Second,
+			Timeout:    5 * time.Second,
 		},
 	}
 
@@ -262,7 +262,7 @@ func BenchmarkEvaluatorRun(b *testing.B) {
 
 	gt := GoldenTask{
 		Name: "bench", Description: "benchmark",
-		Task: agent.Task{ID: "bench-1", Description: "say hello"},
+		Task:       agent.Task{ID: "bench-1", Description: "say hello"},
 		Assertions: []Assertion{AssertNotEmpty()},
 	}
 

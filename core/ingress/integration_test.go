@@ -23,7 +23,7 @@ type testIntegrationBus struct {
 
 func (b *testIntegrationBus) Connect(ctx context.Context) error { return nil }
 func (b *testIntegrationBus) IsConnected() bool                 { return true }
-func (b *testIntegrationBus) Close(ctx context.Context) error    { return nil }
+func (b *testIntegrationBus) Close(ctx context.Context) error   { return nil }
 func (b *testIntegrationBus) Publish(_ context.Context, subject string, data []byte) error {
 	b.PublishedSubject = subject
 	b.PublishedData = data

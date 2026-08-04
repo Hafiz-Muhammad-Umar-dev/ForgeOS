@@ -17,8 +17,8 @@ var _ Planner = (*LLMPlanner)(nil)
 // LLMPlanner implements Planner by calling an LLM to decompose the intent
 // into a structured DAG. The LLM response is parsed as JSON.
 type LLMPlanner struct {
-	llm      provider.LLMProvider
-	model    string
+	llm   provider.LLMProvider
+	model string
 }
 
 // NewLLMPlanner creates an LLMPlanner that uses the given LLM provider.

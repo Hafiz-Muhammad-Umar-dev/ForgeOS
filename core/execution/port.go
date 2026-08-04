@@ -26,11 +26,11 @@ type Execution struct {
 }
 
 type Event struct {
-	ID        string    `json:"id"`
-	ExecutionID string  `json:"execution_id"`
-	Type      string    `json:"type"`
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
+	ID          string    `json:"id"`
+	ExecutionID string    `json:"execution_id"`
+	Type        string    `json:"type"`
+	Content     string    `json:"content"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 type Metrics struct {

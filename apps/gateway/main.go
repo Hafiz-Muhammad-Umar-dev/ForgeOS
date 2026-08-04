@@ -10,21 +10,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/auth"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/lifecycle"
-	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/workspacefs"
 )
 
 var _ lifecycle.Component = (*Gateway)(nil)
 
 type Gateway struct {
-	config     GatewayConfig
-	provider   auth.AuthProvider
-	ingress    ingress.IntentIngress
-	intentsSvc *intents.Service
-	server     *http.Server
+	config          GatewayConfig
+	provider        auth.AuthProvider
+	ingress         ingress.IntentIngress
+	intentsSvc      *intents.Service
+	workspaceSvc    *workspacefs.Service
+	defaultWsID     string
+	defaultWsLoaded bool
+	server          *http.Server
 }
 
 type GatewayConfig struct {
@@ -39,13 +43,14 @@ func DefaultGatewayConfig() GatewayConfig {
 	}
 }
 
-// NewGateway creates a Gateway backed by an intents service for persistence.
-func NewGateway(cfg GatewayConfig, provider auth.AuthProvider, ing ingress.IntentIngress, svc *intents.Service) *Gateway {
+// NewGateway creates a Gateway backed by persistence services.
+func NewGateway(cfg GatewayConfig, provider auth.AuthProvider, ing ingress.IntentIngress, svc *intents.Service, ws *workspacefs.Service) *Gateway {
 	return &Gateway{
-		config:     cfg,
-		provider:   provider,
-		ingress:    ing,
-		intentsSvc: svc,
+		config:       cfg,
+		provider:     provider,
+		ingress:      ing,
+		intentsSvc:   svc,
+		workspaceSvc: ws,
 	}
 }
 
@@ -63,6 +68,9 @@ func (g *Gateway) Init(_ context.Context) error {
 	}
 	if g.intentsSvc == nil {
 		return fmt.Errorf("gateway: intents service is required")
+	}
+	if g.workspaceSvc == nil {
+		return fmt.Errorf("gateway: workspace service is required")
 	}
 	return nil
 }
@@ -126,6 +134,16 @@ func (g *Gateway) handleAuthenticated(w http.ResponseWriter, r *http.Request) {
 		g.handleGetIntentByPath(w, r, path)
 	case path == "/v1/tasks" && method == http.MethodGet:
 		g.handleListTasks(w, r)
+	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodGet:
+		g.handleWorkspaceGet(w, r, path)
+	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodPost:
+		g.handleWorkspacePost(w, r, path)
+	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodPut:
+		g.handleWorkspacePut(w, r, path)
+	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodPatch:
+		g.handleWorkspacePatch(w, r, path)
+	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodDelete:
+		g.handleWorkspaceDelete(w, r, path)
 	default:
 		g.handleV1Mock(w, r, path, method)
 	}

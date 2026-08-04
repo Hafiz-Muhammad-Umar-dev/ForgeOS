@@ -11,7 +11,7 @@ import (
 
 // Compile-time checks.
 var (
-	_ Registry           = (*InMemoryRegistry)(nil)
+	_ Registry            = (*InMemoryRegistry)(nil)
 	_ lifecycle.Component = (*InMemoryRegistry)(nil)
 )
 

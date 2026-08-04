@@ -29,8 +29,8 @@ type DAGExecutor struct {
 	planner     planner.Planner
 	coordinator *Coordinator
 	nodeExec    *NodeExecutor
-	gate        hitl.HITLGate     // optional human-in-the-loop approval
-	gov         budget.Governor   // optional budget enforcement
+	gate        hitl.HITLGate   // optional human-in-the-loop approval
+	gov         budget.Governor // optional budget enforcement
 	sub         bus.Subscription
 	mu          sync.Mutex
 	started     bool

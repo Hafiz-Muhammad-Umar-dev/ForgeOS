@@ -35,9 +35,9 @@ type FakePlanner struct {
 func NewFakePlanner() *FakePlanner {
 	return &FakePlanner{
 		Result: &dag.DAG{
-			ID:      "fake-dag-1",
-			Status:  dag.DAGProposed,
-			Nodes:   []dag.Node{{ID: "node-1", Agent: "coder", Description: "implement the task"}},
+			ID:        "fake-dag-1",
+			Status:    dag.DAGProposed,
+			Nodes:     []dag.Node{{ID: "node-1", Agent: "coder", Description: "implement the task"}},
 			CreatedAt: time.Now(),
 		},
 	}

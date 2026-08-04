@@ -14,7 +14,7 @@ var _ ChannelProvider = (*DiscordAdapter)(nil)
 
 // discordWebhookPayload is the JSON payload sent to Discord's webhook API.
 type discordWebhookPayload struct {
-	Content string        `json:"content"`
+	Content string         `json:"content"`
 	Embeds  []discordEmbed `json:"embeds,omitempty"`
 }
 

@@ -11,15 +11,15 @@ import (
 type Status string
 
 const (
-	StatusPending    Status = "pending"
-	StatusDeploying  Status = "deploying"
-	StatusBuilding   Status = "building"
-	StatusUploading  Status = "uploading"
-	StatusRunning    Status = "running"
-	StatusHealthy    Status = "healthy"
-	StatusStopped    Status = "stopped"
-	StatusFailed     Status = "failed"
-	StatusCancelled  Status = "cancelled"
+	StatusPending   Status = "pending"
+	StatusDeploying Status = "deploying"
+	StatusBuilding  Status = "building"
+	StatusUploading Status = "uploading"
+	StatusRunning   Status = "running"
+	StatusHealthy   Status = "healthy"
+	StatusStopped   Status = "stopped"
+	StatusFailed    Status = "failed"
+	StatusCancelled Status = "cancelled"
 )
 
 type Deployment struct {
@@ -44,9 +44,9 @@ type Log struct {
 }
 
 type Stage struct {
-	Name      string    `json:"name"`
-	Status    Status    `json:"status"`
-	StartedAt time.Time `json:"started_at,omitempty"`
+	Name       string    `json:"name"`
+	Status     Status    `json:"status"`
+	StartedAt  time.Time `json:"started_at,omitempty"`
 	FinishedAt time.Time `json:"finished_at,omitempty"`
 }
 
@@ -155,8 +155,8 @@ func (m *Manager) AddStage(id, name string, status Status) error {
 		return fmt.Errorf("deployment not found: %s", id)
 	}
 	m.stages[id] = append(m.stages[id], Stage{
-		Name:   name,
-		Status: status,
+		Name:      name,
+		Status:    status,
 		StartedAt: time.Now(),
 	})
 	return nil

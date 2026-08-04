@@ -72,11 +72,11 @@ type WorkspaceSpec struct {
 
 // Workspace represents a provisioned workspace.
 type Workspace struct {
-	ID      WorkspaceID    `json:"id"`
-	Spec    WorkspaceSpec  `json:"spec"`
+	ID      WorkspaceID     `json:"id"`
+	Spec    WorkspaceSpec   `json:"spec"`
 	Status  WorkspaceStatus `json:"status"`
-	RootDir string         `json:"root_dir"`
-	Created time.Time      `json:"created"`
+	RootDir string          `json:"root_dir"`
+	Created time.Time       `json:"created"`
 }
 
 // ExecRequest is the input to execute a command inside a workspace.

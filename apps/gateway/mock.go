@@ -123,9 +123,6 @@ func v1MockResponse(path string, method string) any {
 		}
 		return map[string]string{"status": "ok"}
 
-	case "workspace":
-		return map[string]any{"name": "workspace", "type": "folder", "path": "/", "children": []any{}}
-
 	case "metrics":
 		return []map[string]any{
 			{"cpu": 0.35, "memory": 0.55, "disk": 0.28, "network": 0.8, "requests_per_sec": 120, "latency": 35, "errors": 0, "timestamp": "2026-07-29T10:00:00Z"},

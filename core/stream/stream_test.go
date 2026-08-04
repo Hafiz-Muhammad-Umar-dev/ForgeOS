@@ -2,9 +2,9 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
-	"fmt"
 
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/bus"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/event"
@@ -12,10 +12,10 @@ import (
 
 // mockBus implements bus.BusPort for testing.
 type mockBus struct {
-	mu          sync.Mutex
-	handlers    []bus.MessageHandler
-	subjects    []string
-	connected   bool
+	mu        sync.Mutex
+	handlers  []bus.MessageHandler
+	subjects  []string
+	connected bool
 }
 
 func (b *mockBus) Connect(_ context.Context) error                     { return nil }
@@ -31,6 +31,7 @@ func (b *mockBus) Subscribe(_ context.Context, subject string, handler bus.Messa
 }
 
 type mockSub struct{}
+
 func (s *mockSub) Unsubscribe() error { return nil }
 func (s *mockSub) Subject() string    { return "" }
 
@@ -206,8 +207,8 @@ func TestHubDoubleCloseProtection(t *testing.T) {
 
 func TestSSEFormat(t *testing.T) {
 	env := event.RawEnvelope{
-		ID:   "evt-1",
-		Type: event.TypeIntentCompleted,
+		ID:      "evt-1",
+		Type:    event.TypeIntentCompleted,
 		Payload: []byte(`{"summary":"done"}`),
 	}
 	sse := FormatSSE(env)

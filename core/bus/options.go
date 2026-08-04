@@ -51,12 +51,12 @@ type StreamConfig struct {
 // DefaultNatsConfig returns a sensible default configuration for development.
 func DefaultNatsConfig() NatsConfig {
 	return NatsConfig{
-		URL:            "nats://localhost:4222",
-		Name:           "devos",
-		Timeout:        5 * time.Second,
-		ReconnectWait:  2 * time.Second,
-		MaxReconnects:  -1,
-		StreamConfigs:  DefaultStreamConfigs(),
+		URL:           "nats://localhost:4222",
+		Name:          "devos",
+		Timeout:       5 * time.Second,
+		ReconnectWait: 2 * time.Second,
+		MaxReconnects: -1,
+		StreamConfigs: DefaultStreamConfigs(),
 	}
 }
 
