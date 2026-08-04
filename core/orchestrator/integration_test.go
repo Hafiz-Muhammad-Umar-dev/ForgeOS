@@ -14,7 +14,7 @@ import (
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/workspace"
 )
 
-// TestIntegrationOrchestratorFullCycle verifies the entire intent lifecycle:
+// TestIntegrationOrchestratorFullCycle verifies the entire intent lifecycle.
 // subscribe → receive event → dispatch → publish lifecycle event.
 func TestIntegrationOrchestratorFullCycle(t *testing.T) {
 	tb := &testBus{connected: true}
