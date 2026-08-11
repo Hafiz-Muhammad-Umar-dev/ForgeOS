@@ -155,7 +155,8 @@ func (r *Repository) GetPlan(ctx context.Context, executionID string) (*Executio
 	defer nodeRows.Close()
 	for nodeRows.Next() {
 		var n ExecutionNode
-		if err := nodeRows.Scan(&n.ID, &n.ParentID, &n.AgentRole, &n.Label, &n.Status, &n.Progress, &n.Runtime, &n.Tokens, &n.Cost, &n.ParentID); err != nil {
+		var execID string
+		if err := nodeRows.Scan(&n.ID, &execID, &n.AgentRole, &n.Label, &n.Status, &n.Progress, &n.Runtime, &n.Tokens, &n.Cost, &n.ParentID); err != nil {
 			return nil, fmt.Errorf("execution: scan node: %w", err)
 		}
 		plan.Nodes = append(plan.Nodes, n)
@@ -168,7 +169,8 @@ func (r *Repository) GetPlan(ctx context.Context, executionID string) (*Executio
 	defer edgeRows.Close()
 	for edgeRows.Next() {
 		var e ExecutionEdge
-		if err := edgeRows.Scan(&e.ID, &e.Source, &e.Target, &e.Source, &e.Target); err != nil {
+		var execID string
+		if err := edgeRows.Scan(&e.ID, &execID, &e.Source, &e.Target); err != nil {
 			return nil, fmt.Errorf("execution: scan edge: %w", err)
 		}
 		plan.Edges = append(plan.Edges, e)

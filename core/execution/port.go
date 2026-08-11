@@ -17,20 +17,25 @@ const (
 )
 
 type Execution struct {
-	ID        string    `json:"id"`
-	IntentID  string    `json:"intent_id"`
-	AgentName string    `json:"agent_name"`
-	Status    Status    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string     `json:"id"`
+	IntentID    string     `json:"intent_id"`
+	AgentName   string     `json:"agent_name"`
+	Status      Status     `json:"status"`
+	OrgID       string     `json:"org_id,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 }
 
 type Event struct {
-	ID          string    `json:"id"`
-	ExecutionID string    `json:"execution_id"`
-	Type        string    `json:"type"`
-	Content     string    `json:"content"`
-	Timestamp   time.Time `json:"timestamp"`
+	ID          string            `json:"id"`
+	ExecutionID string            `json:"execution_id"`
+	Type        string            `json:"type"`
+	AgentID     string            `json:"agent_id,omitempty"`
+	Content     string            `json:"content"`
+	Metadata    map[string]any    `json:"metadata,omitempty"`
+	Timestamp   time.Time         `json:"timestamp"`
 }
 
 type Metrics struct {
