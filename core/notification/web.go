@@ -2,58 +2,45 @@ package notification
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/bus"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/event"
-	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/stream"
 )
-
-// notificationToJSON serializes a notification payload to JSON bytes.
-func notificationToJSON(n NotificationPayload) []byte {
-	data, _ := json.Marshal(n)
-	return data
-}
 
 // Compile-time check.
 var _ NotificationPort = (*WebAdapter)(nil)
 
 // WebAdapter is a NotificationPort implementation that pushes notifications
-// to Web PWA clients via the StreamHub. It is one of several adapters called
-// by the Notification Service (alongside LoggingAdapter, DiscordAdapter).
+// to Web PWA clients. It publishes the notification as a bus event on the
+// intent's subject; the StreamHub subscribes to these events and fans them
+// out to the Web PWA subscribers for that intent.
 type WebAdapter struct {
-	hub stream.Streamer
+	bus bus.BusPort
 }
 
-// NewWebAdapter creates a WebAdapter backed by the given Streamer.
-func NewWebAdapter(hub stream.Streamer) *WebAdapter {
-	return &WebAdapter{hub: hub}
+// NewWebAdapter creates a WebAdapter that publishes notifications to the bus.
+func NewWebAdapter(b bus.BusPort) *WebAdapter {
+	return &WebAdapter{bus: b}
 }
 
-// Send pushes a notification to the Web PWA. It maps the notification's
-// intent ID to a stream subscriber and delivers an event envelope.
+// Send publishes a notification event to the bus for delivery to Web PWA
+// subscribers of the notification's intent.
 func (w *WebAdapter) Send(ctx context.Context, notification NotificationPayload) error {
-	if w.hub == nil || notification.IntentID == "" {
+	if w.bus == nil || notification.IntentID == "" {
 		return nil
 	}
 
-	// Build a raw envelope for delivery.
-	env := event.RawEnvelope{
-		Type:    "notification.sent",
-		Payload: []byte(notificationToJSON(notification)),
-	}
+	env := event.New("notification.sent", "notification", notification,
+		event.WithOrgID(notification.OrgID),
+		event.WithTraceID(notification.TraceID),
+	)
 
-	// Subscribe (ephemeral) to the intent's stream, deliver, unsubscribe.
-	subID := "web-" + notification.IntentID
-	ch, err := w.hub.Subscribe(ctx, notification.IntentID, subID)
+	data, err := event.Serialize(env)
 	if err != nil {
-		return err
+		return fmt.Errorf("web: serialize: %w", err)
 	}
-	defer w.hub.Unsubscribe(notification.IntentID, subID)
 
-	select {
-	case ch <- env:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	// Publish on the intent's subject so the StreamHub can fan it out.
+	return w.bus.Publish(ctx, "devos.intent.notify", data)
 }
