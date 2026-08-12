@@ -158,7 +158,29 @@ func (g *Gateway) handleAuthenticated(w http.ResponseWriter, r *http.Request) {
 		g.handleListExecutions(w, r)
 	case strings.HasPrefix(path, "/v1/executions/") && method == http.MethodGet:
 		g.handleExecutionGetOrSub(w, r, path)
+	case path == "/v1/executions" && method == http.MethodPost:
+		// Not used, but reserve for future
+		g.handleV1Mock(w, r, path, method)
 	case strings.HasPrefix(path, "/v1/executions/") && method == http.MethodPost:
+		// Check for intent-based action routes: /v1/executions/{intentId}/{action}
+		// or /v1/executions/{intentId}/metrics or /v1/executions/{intentId}/events
+		if strings.Contains(path, "/metrics") {
+			g.handleExecutionMetricsByIntent(w, r)
+			return
+		}
+		if strings.Contains(path, "/events") {
+			g.handleExecutionEventsByIntent(w, r)
+			return
+		}
+		// Check if it's an action route (run, pause, resume, stop)
+		rest := strings.TrimPrefix(path, "/v1/executions/")
+		parts := strings.Split(rest, "/")
+		if len(parts) == 2 {
+			// Could be intent-based action or execution-based action
+			// We'll try intent-based first for frontend compatibility
+			g.handleExecutionActionByIntent(w, r)
+			return
+		}
 		g.handleExecutionAction(w, r)
 	default:
 		g.handleV1Mock(w, r, path, method)

@@ -17,7 +17,9 @@ import (
 
 	gw "github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway"
 	gwAuth "github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/auth"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/agents"
 	ingressBus "github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/bus"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/execution"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/store"
@@ -56,7 +58,10 @@ func main() {
 		}
 		defer pg.Close(ctx)
 
-		migrator := store.NewMigrator(pg, append(intents.Migrations(), workspacefs.Migrations()...))
+		allMigrations := append(intents.Migrations(), workspacefs.Migrations()...)
+	allMigrations = append(allMigrations, agents.Migrations()...)
+	allMigrations = append(allMigrations, execution.Migrations()...)
+	migrator := store.NewMigrator(pg, allMigrations)
 		if err := migrator.Run(ctx); err != nil {
 			log.Fatalf("run migrations: %v", err)
 		}
@@ -75,6 +80,14 @@ func main() {
 	workspaceRepo := workspacefs.NewRepository(db)
 	workspaceSvc := workspacefs.NewService(workspaceRepo)
 
+	// Build the agents service.
+	agentsRepo := agents.NewRepository(db)
+	agentsSvc := agents.NewService(agentsRepo)
+
+	// Build the executions service.
+	execRepo := execution.NewRepository(db)
+	execSvc := execution.NewService(execRepo)
+
 	// Connect to the bus for the ingress.
 	bus := ingressBus.NewNatsBus(ingressBus.WithNatsURL(natsURL))
 	if err := bus.Connect(ctx); err != nil {
@@ -87,7 +100,7 @@ func main() {
 	cfg := gw.DefaultGatewayConfig()
 	cfg.ListenAddr = listenAddr
 
-	gateway := gw.NewGateway(cfg, provider, ing, intentsSvc, workspaceSvc)
+	gateway := gw.NewGateway(cfg, provider, ing, intentsSvc, workspaceSvc, agentsSvc, execSvc)
 
 	if err := gateway.Init(ctx); err != nil {
 		log.Fatalf("init: %v", err)

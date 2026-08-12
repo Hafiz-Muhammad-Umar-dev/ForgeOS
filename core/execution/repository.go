@@ -243,6 +243,24 @@ func (r *Repository) GetMetrics(ctx context.Context, executionID string) (*Metri
 	return &m, nil
 }
 
+// GetLatestExecutionForIntent returns the most recent execution for an intent.
+func (r *Repository) GetLatestExecutionForIntent(ctx context.Context, intentID string) (*Execution, error) {
+	rows, err := r.store.Query(ctx, sqlListExecutionsByIntent, intentID)
+	if err != nil {
+		return nil, fmt.Errorf("execution: list by intent: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var e Execution
+		if err := scanExecutionInto(&e, rows); err != nil {
+			return nil, err
+		}
+		return &e, nil
+	}
+	return nil, fmt.Errorf("execution: not found for intent %s", intentID)
+}
+
 // scanner matches the Scan method on both store.Row and store.Rows.
 type scanner interface {
 	Scan(dest ...any) error

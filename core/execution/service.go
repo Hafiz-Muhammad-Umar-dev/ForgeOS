@@ -100,3 +100,26 @@ func (s *Service) UpdateMetrics(ctx context.Context, m Metrics) error {
 func (s *Service) GetMetrics(ctx context.Context, executionID string) (*Metrics, error) {
 	return s.repo.GetMetrics(ctx, executionID)
 }
+
+// GetOrCreateExecutionForIntent returns the latest execution for an intent,
+// or creates a new one if none exists.
+func (s *Service) GetOrCreateExecutionForIntent(ctx context.Context, intentID, agentName string) (*Execution, error) {
+	e, err := s.repo.GetLatestExecutionForIntent(ctx, intentID)
+	if err == nil {
+		return e, nil
+	}
+	// Create a new execution for this intent
+	now := s.now()
+	e = &Execution{
+		ID:        newID(),
+		IntentID:  intentID,
+		AgentName: agentName,
+		Status:    StatusPending,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := s.repo.UpsertExecution(ctx, *e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}

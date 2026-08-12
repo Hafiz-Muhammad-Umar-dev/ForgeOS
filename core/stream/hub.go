@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -83,6 +84,12 @@ func defaultSubjects() []string {
 		"devos.node.failed",
 		"devos.plan.started",
 		"devos.plan.proposed",
+		"devos.execution.started",
+		"devos.execution.completed",
+		"devos.execution.failed",
+		"devos.execution.paused",
+		"devos.execution.resumed",
+		"devos.execution.event",
 	}
 }
 
@@ -313,6 +320,7 @@ func (h *Hub) fanOut(env event.RawEnvelope) {
 
 // extractIntentID attempts to determine the intent ID from an event envelope.
 // For intent events, the envelope ID is the intent ID.
+// For execution events, the intent ID is in the payload.
 // For other events, returns empty (not matched to a specific intent stream).
 func extractIntentID(env event.RawEnvelope) string {
 	switch env.Type {
@@ -320,6 +328,17 @@ func extractIntentID(env event.RawEnvelope) string {
 		event.TypePlanStarted, event.TypePlanProposed,
 		event.TypePlanApproved, event.TypePlanRejected:
 		return env.ID
+	case event.TypeExecutionStarted, event.TypeExecutionCompleted,
+		event.TypeExecutionFailed, event.TypeExecutionPaused,
+		event.TypeExecutionResumed, event.TypeExecutionEvent:
+		// Extract intent_id from payload
+		var payload struct {
+			IntentID string `json:"intent_id"`
+		}
+		if err := json.Unmarshal(env.Payload, &payload); err == nil && payload.IntentID != "" {
+			return payload.IntentID
+		}
+		return ""
 	default:
 		return ""
 	}

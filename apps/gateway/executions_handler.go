@@ -62,6 +62,86 @@ func (g *Gateway) handleExecutionAction(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, exec)
 }
 
+// handleExecutionActionByIntent serves POST /v1/executions/{intentId}/{action}
+// where intentId is the intent ID. It resolves to the latest execution for that intent.
+func (g *Gateway) handleExecutionActionByIntent(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/executions/"), "/")
+	if len(parts) < 2 {
+		writeError(w, http.StatusBadRequest, "intent id and action required")
+		return
+	}
+	intentID := parts[0]
+	actionName := parts[1]
+
+	action := execution.Action(actionName)
+	switch action {
+	case execution.ActionRun, execution.ActionPause, execution.ActionResume, execution.ActionStop:
+	default:
+		writeError(w, http.StatusBadRequest, "unknown action: "+actionName)
+		return
+	}
+
+	// Get or create execution for this intent
+	exec, err := g.execSvc.GetOrCreateExecutionForIntent(r.Context(), intentID, "coder")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get or create execution")
+		return
+	}
+
+	exec, err = g.execSvc.ApplyAction(r.Context(), exec.ID, action)
+	if err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, exec)
+}
+
+// handleExecutionMetricsByIntent serves GET /v1/executions/{intentId}/metrics
+func (g *Gateway) handleExecutionMetricsByIntent(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/executions/"), "/")
+	if len(parts) < 2 || parts[1] != "metrics" {
+		writeError(w, http.StatusBadRequest, "intent id required")
+		return
+	}
+	intentID := parts[0]
+
+	exec, err := g.execSvc.GetOrCreateExecutionForIntent(r.Context(), intentID, "coder")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get or create execution")
+		return
+	}
+
+	metrics, err := g.execSvc.GetMetrics(r.Context(), exec.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get metrics")
+		return
+	}
+	writeJSON(w, http.StatusOK, metrics)
+}
+
+// handleExecutionEventsByIntent serves GET /v1/executions/{intentId}/events
+func (g *Gateway) handleExecutionEventsByIntent(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/executions/"), "/")
+	if len(parts) < 2 || parts[1] != "events" {
+		writeError(w, http.StatusBadRequest, "intent id required")
+		return
+	}
+	intentID := parts[0]
+
+	exec, err := g.execSvc.GetOrCreateExecutionForIntent(r.Context(), intentID, "coder")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get or create execution")
+		return
+	}
+
+	events, err := g.execSvc.ListEvents(r.Context(), exec.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list events")
+		return
+	}
+	writeJSON(w, http.StatusOK, events)
+}
+
 // handleExecutionGetOrSub dispatches GET /v1/executions/{id} vs sub-resources.
 func (g *Gateway) handleExecutionGetOrSub(w http.ResponseWriter, r *http.Request, path string) {
 	rest := strings.TrimPrefix(path, "/v1/executions/")

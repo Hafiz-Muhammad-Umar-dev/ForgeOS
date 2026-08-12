@@ -35,28 +35,6 @@ func v1MockResponse(path string, method string) any {
 	case "plans":
 		return map[string]any{"id": path, "intent_id": path, "status": "completed", "summary": "Plan executed successfully", "created_at": "2026-07-29T10:00:00Z", "updated_at": "2026-07-29T11:00:00Z"}
 
-	case "agents":
-		if len(parts) > 2 {
-			return map[string]any{"id": parts[2], "name": "Agent " + parts[2], "role": "coder", "status": "idle", "model": "claude-sonnet-4", "temperature": 0.4}
-		}
-		return []map[string]any{
-			{"id": "planner", "name": "Planner", "role": "planner", "status": "idle", "model": "claude-sonnet-4", "temperature": 0.3, "queue_length": 0},
-			{"id": "coder", "name": "Coder", "role": "coder", "status": "idle", "model": "claude-sonnet-4", "temperature": 0.4, "queue_length": 0},
-			{"id": "reviewer", "name": "Reviewer", "role": "reviewer", "status": "idle", "model": "claude-sonnet-4", "temperature": 0.2, "queue_length": 0},
-		}
-
-	case "executions":
-		if len(parts) >= 4 && parts[3] == "metrics" {
-			return map[string]any{"total_tokens": 1250, "prompt_tokens": 770, "completion_tokens": 480, "estimated_cost": 0.015, "execution_duration": 45000, "average_latency": 320, "tools_executed": 12}
-		}
-		if len(parts) >= 4 && parts[3] == "events" {
-			return []map[string]any{
-				{"id": "evt-1", "type": "tool_started", "agent_id": "planner", "content": "Planning task execution", "timestamp": "2026-07-29T10:00:00Z"},
-				{"id": "evt-2", "type": "reasoning", "agent_id": "coder", "content": "Analyzing implementation options", "timestamp": "2026-07-29T10:05:00Z"},
-			}
-		}
-		return map[string]any{"id": "exec-1", "intent_id": parts[2], "status": "running", "created_at": "2026-07-29T10:00:00Z", "updated_at": "2026-07-29T10:05:00Z"}
-
 	case "deployments":
 		if len(parts) >= 3 && parts[2] == "stream" {
 			return nil
