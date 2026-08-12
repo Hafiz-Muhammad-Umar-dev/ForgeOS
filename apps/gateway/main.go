@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/apps/gateway/middleware"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/agents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/auth"
+	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/execution"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/ingress"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/intents"
 	"github.com/Hafiz-Muhammad-Umar12/ForgeOS/core/lifecycle"
@@ -26,6 +28,8 @@ type Gateway struct {
 	ingress         ingress.IntentIngress
 	intentsSvc      *intents.Service
 	workspaceSvc    *workspacefs.Service
+	agentsSvc       *agents.Service
+	execSvc         *execution.Service
 	defaultWsID     string
 	defaultWsLoaded bool
 	server          *http.Server
@@ -44,13 +48,15 @@ func DefaultGatewayConfig() GatewayConfig {
 }
 
 // NewGateway creates a Gateway backed by persistence services.
-func NewGateway(cfg GatewayConfig, provider auth.AuthProvider, ing ingress.IntentIngress, svc *intents.Service, ws *workspacefs.Service) *Gateway {
+func NewGateway(cfg GatewayConfig, provider auth.AuthProvider, ing ingress.IntentIngress, svc *intents.Service, ws *workspacefs.Service, as *agents.Service, es *execution.Service) *Gateway {
 	return &Gateway{
 		config:       cfg,
 		provider:     provider,
 		ingress:      ing,
 		intentsSvc:   svc,
 		workspaceSvc: ws,
+		agentsSvc:    as,
+		execSvc:      es,
 	}
 }
 
@@ -144,6 +150,16 @@ func (g *Gateway) handleAuthenticated(w http.ResponseWriter, r *http.Request) {
 		g.handleWorkspacePatch(w, r, path)
 	case strings.HasPrefix(path, "/v1/workspace/") && method == http.MethodDelete:
 		g.handleWorkspaceDelete(w, r, path)
+	case strings.HasPrefix(path, "/v1/agents/") && method == http.MethodGet:
+		g.handleGetAgent(w, r, path)
+	case path == "/v1/agents" && method == http.MethodGet:
+		g.handleListAgents(w, r)
+	case path == "/v1/executions" && method == http.MethodGet:
+		g.handleListExecutions(w, r)
+	case strings.HasPrefix(path, "/v1/executions/") && method == http.MethodGet:
+		g.handleExecutionGetOrSub(w, r, path)
+	case strings.HasPrefix(path, "/v1/executions/") && method == http.MethodPost:
+		g.handleExecutionAction(w, r)
 	default:
 		g.handleV1Mock(w, r, path, method)
 	}
